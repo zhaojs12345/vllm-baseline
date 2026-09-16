@@ -1,61 +1,418 @@
-算子名称,对应benchmark文件,baseline实现方式,baseline说明,vLLM接口调用方式(CUDA)
-add_rms_norm,test_add_rms_norm.py,torch实现,手写 (x1+x2) 后做 RMSNorm；ascend 厂商改用 torch_npu.npu_add_rms_norm,-
-mhc_post,test_mhc.py,torch实现,仓库自研 torch 参考 mhc_post_ref (flaggems_vllm.ops.mhc.mhc_post),-
-mhc_pre,test_mhc.py,torch实现,仓库自研 torch 参考 mhc_pre_ref (flaggems_vllm.ops.mhc.mhc_pre),-
-moe_sum,test_moe_sum.py,torch实现,output.copy_(input.sum(dim=1)),-
-silu_and_mul_with_clamp,test_silu_and_mul_with_clamp.py,torch实现,torch.clamp + F.silu + torch.mul 手写,-
-fused_add_rms_norm,test_fused_add_rms_norm.py,vLLM接口(厂商相关),nvidia 用 vllm C/CUDA fused_add_rms_norm；mthreads 用 musa_fused_add_rms_norm；其余厂商回退 torch 参考,"import: from vllm import _custom_ops as vendor_ops  调用: vendor_ops.fused_add_rms_norm(x, residual, weight, eps)  # 原地更新 x/residual"
-grouped_topk,test_grouped_topk.py,torch实现,ref_grouped_topk：移植自 vLLM grouped_topk_router 的纯 torch 实现,-
-per_token_group_quant_fp8,test_per_token_group_quant_fp8.py,vLLM接口,vllm fp8_utils.per_token_group_quant_fp8,"import: from vllm.model_executor.layers.quantization.utils.fp8_utils import per_token_group_quant_fp8  调用: per_token_group_quant_fp8(x, group_size, use_ue8m0=scale_ue8m0)"
-combine_topk_swa_indices,test_deepseek_v4_attention_combine_topk_swa_indices.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops,"import: from vllm.v1.attention.ops.deepseek_v4_ops import combine_topk_swa_indices  调用: combine_topk_swa_indices(...)  # 作为 base.Benchmark 的 torch_op 直接传入"
-compute_global_topk_indices_and_lens,test_deepseek_v4_attention_compute_global_topk_indices_and_lens.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops,"import: from vllm.v1.attention.ops.deepseek_v4_ops import compute_global_topk_indices_and_lens  调用: compute_global_topk_indices_and_lens(...)  # 作为 torch_op 直接传入"
-fused_q_kv_rmsnorm,test_deepseek_v4_attention_fused_q_kv_rmsnorm.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops.fused_q_kv_rmsnorm,"import: from vllm.v1.attention.ops.deepseek_v4_ops import fused_q_kv_rmsnorm  调用: fused_q_kv_rmsnorm(...)  # 作为 torch_op 直接传入"
-top_k_per_row_prefill,test_top_k_per_row_prefill.py,torch实现,_torch_topk_ref：直接 torch.topk (无 masking),-
-unpack_seq_triton,test_unpack_seq.py,vLLM接口,vllm.v1.attention.ops.common.unpack_seq_triton,"import: from vllm.v1.attention.ops.common import unpack_seq_triton  调用: unpack_seq_triton(...)  # 作为 torch_op 直接传入"
-chunk_gated_delta_rule_fwd,test_FLA/test_chunk_gated_delta_rule_fwd.py,原生Triton基准,_native_gdn_fwd：仓库原生 Triton 实现作基准,-
-cp_gather_indexer_k_quant_cache,test_cp_gather_indexer_k_quant_cache.py,vLLM接口,vllm._custom_ops,"import: import vllm._custom_ops as ops  调用: ops.cp_gather_indexer_k_quant_cache(kv_cache, dst_k, dst_scale, block_table, cu_seq_lens)"
-dequantize_and_gather_k_cache,test_deepseek_v4_attention_dequantize_and_gather_k_cache.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops,"import: from vllm.v1.attention.ops.deepseek_v4_ops import dequantize_and_gather_k_cache  调用: dequantize_and_gather_k_cache(out, k_cache, seq_lens, gather_lens, block_table, block_size, offset)"
-flash_attn_varlen_func,test_flash_attn_varlen_func.py,vLLM接口,vllm.vllm_flash_attn.flash_attn_interface.flash_attn_varlen_func,"import: from vllm.vllm_flash_attn.flash_attn_interface import flash_attn_varlen_func  调用: flash_attn_varlen_func(...)  # 作为 torch_op 直接传入"
-flash_mla,test_flash_mla.py,torch实现,ref_mla 手写参考实现,-
-fp8_fp4_mqa_logits,test_fp8_fp4_mqa_logits.py,vLLM接口,vllm.utils.deep_gemm.fp8_fp4_mqa_logits,"import: from vllm.utils.deep_gemm import fp8_fp4_mqa_logits  调用: fp8_fp4_mqa_logits(q=(q_fp8, None), kv=(k_fp8, k_scale), weights=weights, cu_seqlen_ks=ks, cu_seqlen_ke=ke, clean_logits=True)"
-fp8_fp4_paged_mqa_logits,test_fp8_fp4_paged_mqa_logits.py,vLLM接口,vllm.utils.deep_gemm (paged 版本),"import: from vllm.utils.deep_gemm import fp8_fp4_paged_mqa_logits, get_paged_mqa_logits_metadata  调用: fp8_fp4_paged_mqa_logits(q=(q_fp8, None), kv_cache=kv_fp8, weights=weights, context_lens=context_lens, block_tables=block_table, schedule_metadata=schedule_meta, max_model_len=MAX_MODEL_LEN)"
-fused_deepseek_v4_qnorm_rope_kv_rope_quant_insert,test_fused_deepseek_v4_qnorm_rope_kv_rope_quant_insert.py,vLLM接口,torch.ops._C.fused_deepseek_v4_qnorm_rope_kv_rope_quant_insert (vLLM C++扩展),"import: import vllm._custom_ops  # 加载 torch.ops._C (通过 hasattr 探测)  调用: torch.ops._C.fused_deepseek_v4_qnorm_rope_kv_rope_quant_insert(...)"
-fused_experts_impl,test_fused_moe.py,vLLM接口,vllm.model_executor.layers.fused_moe.fused_moe.fused_experts_impl,"import: from vllm.model_executor.layers.fused_moe.fused_moe import fused_experts_impl  调用: fused_experts_impl(hidden_states.clone(), w1, w2, topk_weights, topk_ids, inplace=False, activation=""silu"")"
-indexer_k_quant_and_cache,test_indexer_k_quant_and_cache.py,vLLM接口,vllm._custom_ops,"import: import vllm._custom_ops as ops  调用: ops.indexer_k_quant_and_cache(k, kv_cache, slot_mapping, quant_block_size, scale_fmt)"
-pack_seq_triton,test_pack_seq.py,vLLM接口,vllm.v1.attention.ops.common.pack_seq_triton,"import: from vllm.v1.attention.ops.common import pack_seq_triton  调用: pack_seq_triton(...)  # 作为 torch_op 直接传入"
-persistent_topk,test_persistent_topk.py,vLLM接口,torch.ops._C.persistent_topk (vLLM C++扩展),"import: import vllm._custom_ops  # 加载 torch.ops._C  调用: torch.ops._C.persistent_topk(logits, lengths, indices, workspace, K, max_seq_len)"
-top_k_per_row_decode,test_top_k_per_row_decode.py,vLLM接口(torch兜底),优先 vllm._custom_ops CUDA kernel；无 vLLM 时回退 torch.topk,"import: import vllm._custom_ops  # 加载 torch.ops._C  调用: torch.ops._C.top_k_per_row_decode(logits, next_n, seq_lens, indices, num_rows, stride0, stride1, top_k)"
-topk_softplus_sqrt,test_topk_softplus_sqrt.py,vLLM接口(torch兜底),优先 vllm._custom_ops.topk_hash_softplus_sqrt；无 vLLM 时回退 torch 参考,"import: from vllm._custom_ops import topk_hash_softplus_sqrt  调用: topk_hash_softplus_sqrt(topk_weights, topk_indices, token_expert_indices, gating_output, renormalize, routed_scaling_factor, correction_bias, input_ids, tid2eid)"
-_qsa_merge_splitk_kernel,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-_qsa_sparse_paged_gqa_splitk_kernel,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-apply_top_k_top_p,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-causal_conv1d_fn,test_causal_conv1d_fn.py,torch实现,逐序列 F.conv1d 循环参考 (causal_conv1d_seq_ref),-
-causal_conv1d_update,test_causal_conv1d_update.py,torch实现,批量 F.conv1d 参考 (_causal_conv1d_update_torch),-
-chunk_gdn2,test_FLA/test_chunk_gdn2.py,原生Triton基准,原生 Triton 路径 (BT=64) 作基准，对比 TLE 封装,-
-chunk_gla,test_FLA/test_chunk_gla_perf.py,第三方库(fla),可选 fla.ops.gla.chunk_gla 参考；未装 fla 时仅测 gems,-
-chunk_kda,test_FLA/test_chunk_kda.py,torch实现,_chunk_kda_torch_reference_op 手写参考,-
-compressor,未找到对应benchmark,-,仅在 src/flaggems_vllm/ops/fused_indexer_q_rope_quant.py 出现，无独立 benchmark,-
-flash_attn_varlen_func_w8a8_fp8,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-flash_mla_sparse_fwd_w8a8_fp8,未找到对应benchmark,-,test_flash_mla_sparse_fwd.py 用 vLLM 基准但非 w8a8_fp8 变体,-
-flash_mla_with_kvcache,test_flash_mla_with_kvcache.py,vLLM接口,vllm.third_party.flashmla.flash_mla_interface,"import: from vllm.third_party.flashmla.flash_mla_interface import flash_mla_with_kvcache, get_mla_metadata  调用: meta, _ = get_mla_metadata(); flash_mla_with_kvcache(q, k_cache, block_table, cache_seqlens, head_dim_v, meta, **kwargs)"
-flash_mla_with_kvcache_fwd_w8a8_fp8,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-fp8_einsum,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-fused_deepseek_v4_qnorm_rope_kv_rope_insert,未找到对应benchmark,-,仅有 ..._quant_insert 版本，无 ..._insert 版本,-
-fused_inv_rope_fp8_quant,test_fused_inv_rope_fp8_quant.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops.fused_inv_rope_fp8_quant,"import: from vllm.v1.attention.ops.deepseek_v4_ops import fused_inv_rope_fp8_quant  调用: fused_inv_rope_fp8_quant(...)  # 作为 torch_op 直接传入"
-fused_marlin_moe_w4a16_int4,test_fused_marlin_moe_w4a16_int4.py,vLLM接口,vllm fused_marlin_moe (_vllm_baseline),"import: from vllm.model_executor.layers.fused_moe.fused_marlin_moe import fused_marlin_moe; from vllm.scalar_type import scalar_types  调用: fused_marlin_moe(hidden_states=..., w1=w1_q_marlin, w2=w2_q_marlin, bias1=None, bias2=None, w1_scale=..., w2_scale=..., topk_weights=..., topk_ids=..., quant_type_id=scalar_types.uint4b8.id)"
-fused_marlin_moe_w4a16_mxfp4,test_fused_marlin_moe_w4a16_mxfp4.py,vLLM接口,vllm fused_marlin_moe (_vllm_baseline_mxfp4),"import: from vllm.model_executor.layers.fused_moe.fused_marlin_moe import fused_marlin_moe; from vllm.scalar_type import scalar_types  调用: fused_marlin_moe(hidden_states=..., w1=w1_q_marlin, w2=w2_q_marlin, bias1=None, bias2=None, w1_scale=..., w2_scale=..., topk_weights=..., topk_ids=..., quant_type_id=<FP4 type>.id)"
-fused_marlin_moe_w8a16_fp8,未找到对应benchmark,-,仅有 w8a16_int8 版本，无 w8a16_fp8 版本,-
-fused_marlin_moe_w8a16_int8,test_fused_marlin_moe_w8a16_int8.py,vLLM接口,vllm fused_marlin_moe (_vllm_baseline_int8),"import: from vllm.model_executor.layers.fused_moe.fused_marlin_moe import fused_marlin_moe; from vllm.scalar_type import scalar_types  调用: fused_marlin_moe(hidden_states=..., w1=w1_q_marlin, w2=w2_q_marlin, w1_scale=..., w2_scale=..., topk_weights=..., topk_ids=..., quant_type_id=<int8 type>.id)"
-gemma_rms_norm,test_qwen4_self_kernels.py,torch实现,对应 qwen4_grouped_gemma_rmsnorm，baseline 为 _torch_grouped_rmsnorm (名称不完全一致，待确认),-
-kv_rmsnorm_rope_cache,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-lightning_indexer,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-MegaGDR,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-megamoe,未找到对应benchmark,-,仅有 stage_deepseek_v4_mega_moe_inputs (相关但不同),-
-MegaPreAttention,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-moe_align_block_size,test_moe_align_block_size_triton.py,vLLM接口,vllm._custom_ops.moe_align_block_size,"import: import vllm._custom_ops as vllm_ops  调用: vllm_ops.moe_align_block_size(...)  # 作为 torch_op 直接传入"
-qsa_pre_indexer,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-qsa_select_paged_decode,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-qsa_select_paged_prefill,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-quant_lightning_indexer,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-SparseAttnSharedKv,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
-w8a8_block_fp8_matmul,test_blas_perf_parallel.py,vLLM接口,vllm fp8_utils.w8a8_triton_block_scaled_mm (另有 deep_gemm 变体),"import: from vllm.model_executor.layers.quantization.utils.fp8_utils import w8a8_triton_block_scaled_mm  调用: w8a8_triton_block_scaled_mm(...)  # 作为 torch_op 直接传入"
+算子名称,对应benchmark文件,baseline实现方式,baseline说明,vLLM接口调用方式(CUDA),"模型实测input_shapes(来自temp,去重)"
+add_rms_norm,test_add_rms_norm.py,torch实现,手写 (x1+x2) 后做 RMSNorm；ascend 厂商改用 torch_npu.npu_add_rms_norm,-,"【注:模糊匹配,该算子与相关融合kernel同名,shape可能不完全对应,待确认】
+[[1000,2048],[1000,2048],[2048],[1000,2048],[1000,2048],[1000,2048],[1000,2048],[1000,2048],[],[]]
+[[1025,2048],[1025,2048],[2048],[1025,2048],[1025,2048],[1025,2048],[1025,2048],[1025,2048],[],[]]
+[[4096,2048],[4096,2048],[2048],[4096,2048],[4096,2048],[4096,2048],[4096,2048],[4096,2048],[],[]]
+[[4097,2048],[4097,2048],[2048],[4097,2048],[4097,2048],[4097,2048],[4097,2048],[4097,2048],[],[]]
+[[4098,2048],[4098,2048],[2048],[4098,2048],[4098,2048],[4098,2048],[4098,2048],[4098,2048],[],[]]
+[[4103,2048],[4103,2048],[2048],[4103,2048],[4103,2048],[4103,2048],[4103,2048],[4103,2048],[],[]]
+[[4104,2048],[4104,2048],[2048],[4104,2048],[4104,2048],[4104,2048],[4104,2048],[4104,2048],[],[]]
+[[4105,2048],[4105,2048],[2048],[4105,2048],[4105,2048],[4105,2048],[4105,2048],[4105,2048],[],[]]
+[[4115,2048],[4115,2048],[2048],[4115,2048],[4115,2048],[4115,2048],[4115,2048],[4115,2048],[],[]]
+[[5089,2048],[5089,2048],[2048],[5089,2048],[5089,2048],[5089,2048],[5089,2048],[5089,2048],[],[]]
+[[8192,2048],[8192,2048],[2048],[8192,2048],[8192,2048],[8192,2048],[8192,2048],[8192,2048],[],[]]"
+mhc_post,test_mhc.py,torch实现,仓库自研 torch 参考 mhc_post_ref (flaggems_vllm.ops.mhc.mhc_post),-,
+mhc_pre,test_mhc.py,torch实现,仓库自研 torch 参考 mhc_pre_ref (flaggems_vllm.ops.mhc.mhc_pre),-,
+moe_sum,test_moe_sum.py,torch实现,output.copy_(input.sum(dim=1)),-,"[[1,2048],[1,2048],[1,2048],[],[],[]]
+[[2,2048],[2,2048],[2,2048],[],[],[]]
+[[3,2048],[3,2048],[3,2048],[],[],[]]
+[[4,2048],[4,2048],[4,2048],[],[],[]]
+[[5,2048],[5,2048],[5,2048],[],[],[]]
+[[6,2048],[6,2048],[6,2048],[],[],[]]
+[[7,2048],[7,2048],[7,2048],[],[],[]]
+[[8,2048],[8,2048],[8,2048],[],[],[]]
+[[9,2048],[9,2048],[9,2048],[],[],[]]
+[[10,2048],[10,2048],[10,2048],[],[],[]]
+[[11,2048],[11,2048],[11,2048],[],[],[]]
+[[12,2048],[12,2048],[12,2048],[],[],[]]
+[[13,2048],[13,2048],[13,2048],[],[],[]]
+[[14,2048],[14,2048],[14,2048],[],[],[]]
+[[15,2048],[15,2048],[15,2048],[],[],[]]
+[[16,2048],[16,2048],[16,2048],[],[],[]]
+[[17,2048],[17,2048],[17,2048],[],[],[]]
+[[18,2048],[18,2048],[18,2048],[],[],[]]
+[[19,2048],[19,2048],[19,2048],[],[],[]]
+[[20,2048],[20,2048],[20,2048],[],[],[]]
+[[21,2048],[21,2048],[21,2048],[],[],[]]
+[[22,2048],[22,2048],[22,2048],[],[],[]]
+[[23,2048],[23,2048],[23,2048],[],[],[]]
+[[24,2048],[24,2048],[24,2048],[],[],[]]
+[[25,2048],[25,2048],[25,2048],[],[],[]]
+[[26,2048],[26,2048],[26,2048],[],[],[]]
+[[27,2048],[27,2048],[27,2048],[],[],[]]
+[[28,2048],[28,2048],[28,2048],[],[],[]]
+[[29,2048],[29,2048],[29,2048],[],[],[]]
+[[30,2048],[30,2048],[30,2048],[],[],[]]
+[[31,2048],[31,2048],[31,2048],[],[],[]]
+[[32,2048],[32,2048],[32,2048],[],[],[]]
+[[33,2048],[33,2048],[33,2048],[],[],[]]
+[[34,2048],[34,2048],[34,2048],[],[],[]]
+[[35,2048],[35,2048],[35,2048],[],[],[]]
+[[36,2048],[36,2048],[36,2048],[],[],[]]
+[[37,2048],[37,2048],[37,2048],[],[],[]]
+[[38,2048],[38,2048],[38,2048],[],[],[]]
+[[39,2048],[39,2048],[39,2048],[],[],[]]
+[[40,2048],[40,2048],[40,2048],[],[],[]]
+[[41,2048],[41,2048],[41,2048],[],[],[]]
+[[42,2048],[42,2048],[42,2048],[],[],[]]
+[[43,2048],[43,2048],[43,2048],[],[],[]]
+[[44,2048],[44,2048],[44,2048],[],[],[]]
+[[45,2048],[45,2048],[45,2048],[],[],[]]
+[[46,2048],[46,2048],[46,2048],[],[],[]]
+[[47,2048],[47,2048],[47,2048],[],[],[]]
+[[48,2048],[48,2048],[48,2048],[],[],[]]
+[[49,2048],[49,2048],[49,2048],[],[],[]]
+[[50,2048],[50,2048],[50,2048],[],[],[]]
+[[51,2048],[51,2048],[51,2048],[],[],[]]
+[[52,2048],[52,2048],[52,2048],[],[],[]]
+[[53,2048],[53,2048],[53,2048],[],[],[]]
+[[54,2048],[54,2048],[54,2048],[],[],[]]
+[[55,2048],[55,2048],[55,2048],[],[],[]]
+[[56,2048],[56,2048],[56,2048],[],[],[]]
+[[57,2048],[57,2048],[57,2048],[],[],[]]
+[[58,2048],[58,2048],[58,2048],[],[],[]]
+[[59,2048],[59,2048],[59,2048],[],[],[]]
+[[60,2048],[60,2048],[60,2048],[],[],[]]
+[[61,2048],[61,2048],[61,2048],[],[],[]]
+[[62,2048],[62,2048],[62,2048],[],[],[]]
+[[63,2048],[63,2048],[63,2048],[],[],[]]
+[[64,2048],[64,2048],[64,2048],[],[],[]]
+[[1025,2048],[1025,2048],[1025,2048],[],[],[]]
+[[4096,4096],[4096,4096],[4096,4096],[4096],[],[]]
+[[5089,4096],[5089,4096],[5089,4096],[5089],[],[]]
+[[8192,4096],[8192,4096],[8192,4096],[8192],[],[]]"
+silu_and_mul_with_clamp,test_silu_and_mul_with_clamp.py,torch实现,torch.clamp + F.silu + torch.mul 手写,-,"[[24576,256],[24576,512],[],[],[]]
+[[30534,256],[30534,512],[],[],[]]
+[[49152,256],[49152,512],[],[],[]]"
+fused_add_rms_norm,test_fused_add_rms_norm.py,vLLM接口(厂商相关),nvidia 用 vllm C/CUDA fused_add_rms_norm；mthreads 用 musa_fused_add_rms_norm；其余厂商回退 torch 参考,"import: from vllm import _custom_ops as vendor_ops  调用: vendor_ops.fused_add_rms_norm(x, residual, weight, eps)  # 原地更新 x/residual","【注:模糊匹配,该算子与相关融合kernel同名,shape可能不完全对应,待确认】
+[[1000,2048],[1000,2048],[2048],[1000,2048],[1000,2048],[1000,2048],[1000,2048],[1000,2048],[],[]]
+[[1025,2048],[1025,2048],[2048],[1025,2048],[1025,2048],[1025,2048],[1025,2048],[1025,2048],[],[]]
+[[4096,2048],[4096,2048],[2048],[4096,2048],[4096,2048],[4096,2048],[4096,2048],[4096,2048],[],[]]
+[[4097,2048],[4097,2048],[2048],[4097,2048],[4097,2048],[4097,2048],[4097,2048],[4097,2048],[],[]]
+[[4098,2048],[4098,2048],[2048],[4098,2048],[4098,2048],[4098,2048],[4098,2048],[4098,2048],[],[]]
+[[4103,2048],[4103,2048],[2048],[4103,2048],[4103,2048],[4103,2048],[4103,2048],[4103,2048],[],[]]
+[[4104,2048],[4104,2048],[2048],[4104,2048],[4104,2048],[4104,2048],[4104,2048],[4104,2048],[],[]]
+[[4105,2048],[4105,2048],[2048],[4105,2048],[4105,2048],[4105,2048],[4105,2048],[4105,2048],[],[]]
+[[4115,2048],[4115,2048],[2048],[4115,2048],[4115,2048],[4115,2048],[4115,2048],[4115,2048],[],[]]
+[[5089,2048],[5089,2048],[2048],[5089,2048],[5089,2048],[5089,2048],[5089,2048],[5089,2048],[],[]]
+[[8192,2048],[8192,2048],[2048],[8192,2048],[8192,2048],[8192,2048],[8192,2048],[8192,2048],[],[]]"
+grouped_topk,test_grouped_topk.py,torch实现,ref_grouped_topk：移植自 vLLM grouped_topk_router 的纯 torch 实现,-,
+per_token_group_quant_fp8,test_per_token_group_quant_fp8.py,vLLM接口,vllm fp8_utils.per_token_group_quant_fp8,"import: from vllm.model_executor.layers.quantization.utils.fp8_utils import per_token_group_quant_fp8  调用: per_token_group_quant_fp8(x, group_size, use_ue8m0=scale_ue8m0)",
+combine_topk_swa_indices,test_deepseek_v4_attention_combine_topk_swa_indices.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops,import: from vllm.v1.attention.ops.deepseek_v4_ops import combine_topk_swa_indices  调用: combine_topk_swa_indices(...)  # 作为 base.Benchmark 的 torch_op 直接传入,
+compute_global_topk_indices_and_lens,test_deepseek_v4_attention_compute_global_topk_indices_and_lens.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops,import: from vllm.v1.attention.ops.deepseek_v4_ops import compute_global_topk_indices_and_lens  调用: compute_global_topk_indices_and_lens(...)  # 作为 torch_op 直接传入,
+fused_q_kv_rmsnorm,test_deepseek_v4_attention_fused_q_kv_rmsnorm.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops.fused_q_kv_rmsnorm,import: from vllm.v1.attention.ops.deepseek_v4_ops import fused_q_kv_rmsnorm  调用: fused_q_kv_rmsnorm(...)  # 作为 torch_op 直接传入,
+top_k_per_row_prefill,test_top_k_per_row_prefill.py,torch实现,_torch_topk_ref：直接 torch.topk (无 masking),-,"[[4096,1024],[4096],[4096],[4096,512],[],[],[],[]]
+[[5027,2048],[5027],[5027],[5027,512],[],[],[],[]]
+[[8189,2047],[8189],[8189],[8189,512],[],[],[],[]]
+[[8191,2047],[8191],[8191],[8191,512],[],[],[],[]]
+[[8132,2839],[8132],[8132],[8132,512],[],[],[],[]]
+[[8134,2854],[8134],[8134],[8134,512],[],[],[],[]]
+[[8136,2868],[8136],[8136],[8136,512],[],[],[],[]]
+[[8138,2882],[8138],[8138],[8138,512],[],[],[],[]]
+[[8140,2896],[8140],[8140],[8140,512],[],[],[],[]]
+[[8142,2909],[8142],[8142],[8142,512],[],[],[],[]]
+[[8144,2921],[8144],[8144],[8144,512],[],[],[],[]]
+[[8146,2933],[8146],[8146],[8146,512],[],[],[],[]]
+[[8148,2945],[8148],[8148],[8148,512],[],[],[],[]]
+[[8150,2956],[8150],[8150],[8150,512],[],[],[],[]]
+[[8152,2966],[8152],[8152],[8152,512],[],[],[],[]]
+[[8154,2976],[8154],[8154],[8154,512],[],[],[],[]]
+[[8156,2986],[8156],[8156],[8156,512],[],[],[],[]]
+[[8158,2995],[8158],[8158],[8158,512],[],[],[],[]]
+[[8160,3003],[8160],[8160],[8160,512],[],[],[],[]]
+[[8162,3011],[8162],[8162],[8162,512],[],[],[],[]]
+[[8164,3019],[8164],[8164],[8164,512],[],[],[],[]]
+[[8166,3026],[8166],[8166],[8166,512],[],[],[],[]]
+[[8168,3032],[8168],[8168],[8168,512],[],[],[],[]]
+[[8170,3038],[8170],[8170],[8170,512],[],[],[],[]]
+[[8172,3044],[8172],[8172],[8172,512],[],[],[],[]]
+[[8174,3049],[8174],[8174],[8174,512],[],[],[],[]]
+[[8176,3053],[8176],[8176],[8176,512],[],[],[],[]]
+[[8178,3057],[8178],[8178],[8178,512],[],[],[],[]]
+[[8180,3061],[8180],[8180],[8180,512],[],[],[],[]]
+[[8182,3064],[8182],[8182],[8182,512],[],[],[],[]]
+[[8184,3066],[8184],[8184],[8184,512],[],[],[],[]]
+[[8186,3068],[8186],[8186],[8186,512],[],[],[],[]]
+[[8188,3070],[8188],[8188],[8188,512],[],[],[],[]]"
+unpack_seq_triton,test_unpack_seq.py,vLLM接口,vllm.v1.attention.ops.common.unpack_seq_triton,import: from vllm.v1.attention.ops.common import unpack_seq_triton  调用: unpack_seq_triton(...)  # 作为 torch_op 直接传入,
+chunk_gated_delta_rule_fwd,test_FLA/test_chunk_gated_delta_rule_fwd.py,原生Triton基准,_native_gdn_fwd：仓库原生 Triton 实现作基准,-,
+cp_gather_indexer_k_quant_cache,test_cp_gather_indexer_k_quant_cache.py,vLLM接口,vllm._custom_ops,"import: import vllm._custom_ops as ops  调用: ops.cp_gather_indexer_k_quant_cache(kv_cache, dst_k, dst_scale, block_table, cu_seq_lens)","[[50312,64,132],[1024,128],[1024,4],[1,128],[2]]
+[[50314,64,132],[1024,128],[1024,4],[1,128],[2]]
+[[50438,64,132],[1024,128],[1024,4],[1,128],[2]]
+[[50312,64,132],[2047,128],[2047,4],[2,128],[3]]
+[[50312,64,132],[2048,128],[2048,4],[2,128],[3]]
+[[50314,64,132],[2047,128],[2047,4],[2,128],[3]]
+[[50314,64,132],[2048,128],[2048,4],[2,128],[3]]
+[[50438,64,132],[2047,128],[2047,4],[2,128],[3]]
+[[50438,64,132],[2048,128],[2048,4],[2,128],[3]]
+[[50312,64,132],[2839,128],[2839,4],[3,128],[4]]
+[[50314,64,132],[2839,128],[2839,4],[3,128],[4]]
+[[50312,64,132],[2854,128],[2854,4],[3,128],[4]]
+[[50314,64,132],[2854,128],[2854,4],[3,128],[4]]
+[[50312,64,132],[2868,128],[2868,4],[3,128],[4]]
+[[50314,64,132],[2868,128],[2868,4],[3,128],[4]]
+[[50312,64,132],[2882,128],[2882,4],[3,128],[4]]
+[[50314,64,132],[2882,128],[2882,4],[3,128],[4]]
+[[50312,64,132],[2896,128],[2896,4],[3,128],[4]]
+[[50314,64,132],[2896,128],[2896,4],[3,128],[4]]
+[[50438,64,132],[2839,128],[2839,4],[3,128],[4]]
+[[50312,64,132],[2909,128],[2909,4],[3,128],[4]]
+[[50314,64,132],[2909,128],[2909,4],[3,128],[4]]
+[[50438,64,132],[2854,128],[2854,4],[3,128],[4]]
+[[50312,64,132],[2921,128],[2921,4],[3,128],[4]]
+[[50314,64,132],[2921,128],[2921,4],[3,128],[4]]
+[[50438,64,132],[2868,128],[2868,4],[3,128],[4]]
+[[50312,64,132],[2933,128],[2933,4],[3,128],[4]]
+[[50314,64,132],[2933,128],[2933,4],[3,128],[4]]
+[[50312,64,132],[2945,128],[2945,4],[3,128],[4]]
+[[50438,64,132],[2882,128],[2882,4],[3,128],[4]]
+[[50314,64,132],[2945,128],[2945,4],[3,128],[4]]
+[[50312,64,132],[2956,128],[2956,4],[3,128],[4]]
+[[50314,64,132],[2956,128],[2956,4],[3,128],[4]]
+[[50438,64,132],[2896,128],[2896,4],[3,128],[4]]
+[[50312,64,132],[2966,128],[2966,4],[3,128],[4]]
+[[50314,64,132],[2966,128],[2966,4],[3,128],[4]]
+[[50438,64,132],[2909,128],[2909,4],[3,128],[4]]
+[[50312,64,132],[2976,128],[2976,4],[3,128],[4]]
+[[50314,64,132],[2976,128],[2976,4],[3,128],[4]]
+[[50438,64,132],[2921,128],[2921,4],[3,128],[4]]
+[[50312,64,132],[2986,128],[2986,4],[3,128],[4]]
+[[50314,64,132],[2986,128],[2986,4],[3,128],[4]]
+[[50312,64,132],[2995,128],[2995,4],[3,128],[4]]
+[[50314,64,132],[2995,128],[2995,4],[3,128],[4]]
+[[50438,64,132],[2933,128],[2933,4],[3,128],[4]]
+[[50312,64,132],[3003,128],[3003,4],[3,128],[4]]
+[[50314,64,132],[3003,128],[3003,4],[3,128],[4]]
+[[50438,64,132],[2945,128],[2945,4],[3,128],[4]]
+[[50312,64,132],[3011,128],[3011,4],[3,128],[4]]
+[[50314,64,132],[3011,128],[3011,4],[3,128],[4]]
+[[50312,64,132],[3019,128],[3019,4],[3,128],[4]]
+[[50438,64,132],[2956,128],[2956,4],[3,128],[4]]
+[[50314,64,132],[3019,128],[3019,4],[3,128],[4]]
+[[50312,64,132],[3026,128],[3026,4],[3,128],[4]]
+[[50314,64,132],[3026,128],[3026,4],[3,128],[4]]
+[[50438,64,132],[2966,128],[2966,4],[3,128],[4]]
+[[50312,64,132],[3032,128],[3032,4],[3,128],[4]]
+[[50314,64,132],[3032,128],[3032,4],[3,128],[4]]
+[[50312,64,132],[3038,128],[3038,4],[3,128],[4]]
+[[50314,64,132],[3038,128],[3038,4],[3,128],[4]]
+[[50438,64,132],[2976,128],[2976,4],[3,128],[4]]
+[[50312,64,132],[3044,128],[3044,4],[3,128],[4]]
+[[50314,64,132],[3044,128],[3044,4],[3,128],[4]]
+[[50312,64,132],[3049,128],[3049,4],[3,128],[4]]
+[[50438,64,132],[2986,128],[2986,4],[3,128],[4]]
+[[50314,64,132],[3049,128],[3049,4],[3,128],[4]]
+[[50312,64,132],[3053,128],[3053,4],[3,128],[4]]
+[[50314,64,132],[3053,128],[3053,4],[3,128],[4]]
+[[50312,64,132],[3057,128],[3057,4],[3,128],[4]]
+[[50314,64,132],[3057,128],[3057,4],[3,128],[4]]
+[[50438,64,132],[2995,128],[2995,4],[3,128],[4]]
+[[50312,64,132],[3061,128],[3061,4],[3,128],[4]]
+[[50314,64,132],[3061,128],[3061,4],[3,128],[4]]
+[[50312,64,132],[3064,128],[3064,4],[3,128],[4]]
+[[50314,64,132],[3064,128],[3064,4],[3,128],[4]]
+[[50312,64,132],[3066,128],[3066,4],[3,128],[4]]
+[[50438,64,132],[3003,128],[3003,4],[3,128],[4]]
+[[50314,64,132],[3066,128],[3066,4],[3,128],[4]]
+[[50312,64,132],[3068,128],[3068,4],[3,128],[4]]
+[[50314,64,132],[3068,128],[3068,4],[3,128],[4]]
+[[50312,64,132],[3070,128],[3070,4],[3,128],[4]]
+[[50314,64,132],[3070,128],[3070,4],[3,128],[4]]
+[[50438,64,132],[3011,128],[3011,4],[3,128],[4]]
+[[50438,64,132],[3019,128],[3019,4],[3,128],[4]]
+[[50438,64,132],[3026,128],[3026,4],[3,128],[4]]
+[[50438,64,132],[3032,128],[3032,4],[3,128],[4]]
+[[50438,64,132],[3038,128],[3038,4],[3,128],[4]]
+[[50438,64,132],[3044,128],[3044,4],[3,128],[4]]
+[[50438,64,132],[3049,128],[3049,4],[3,128],[4]]
+[[50438,64,132],[3053,128],[3053,4],[3,128],[4]]
+[[50438,64,132],[3057,128],[3057,4],[3,128],[4]]
+[[50438,64,132],[3061,128],[3061,4],[3,128],[4]]
+[[50438,64,132],[3064,128],[3064,4],[3,128],[4]]
+[[50438,64,132],[3066,128],[3066,4],[3,128],[4]]
+[[50438,64,132],[3068,128],[3068,4],[3,128],[4]]
+[[50438,64,132],[3070,128],[3070,4],[3,128],[4]]"
+dequantize_and_gather_k_cache,test_deepseek_v4_attention_dequantize_and_gather_k_cache.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops,"import: from vllm.v1.attention.ops.deepseek_v4_ops import dequantize_and_gather_k_cache  调用: dequantize_and_gather_k_cache(out, k_cache, seq_lens, gather_lens, block_table, block_size, offset)",
+flash_attn_varlen_func,test_flash_attn_varlen_func.py,vLLM接口,vllm.vllm_flash_attn.flash_attn_interface.flash_attn_varlen_func,import: from vllm.vllm_flash_attn.flash_attn_interface import flash_attn_varlen_func  调用: flash_attn_varlen_func(...)  # 作为 torch_op 直接传入,
+flash_mla,test_flash_mla.py,torch实现,ref_mla 手写参考实现,-,
+fp8_fp4_mqa_logits,test_fp8_fp4_mqa_logits.py,vLLM接口,vllm.utils.deep_gemm.fp8_fp4_mqa_logits,"import: from vllm.utils.deep_gemm import fp8_fp4_mqa_logits  调用: fp8_fp4_mqa_logits(q=(q_fp8, None), kv=(k_fp8, k_scale), weights=weights, cu_seqlen_ks=ks, cu_seqlen_ke=ke, clean_logits=True)",
+fp8_fp4_paged_mqa_logits,test_fp8_fp4_paged_mqa_logits.py,vLLM接口,vllm.utils.deep_gemm (paged 版本),"import: from vllm.utils.deep_gemm import fp8_fp4_paged_mqa_logits, get_paged_mqa_logits_metadata  调用: fp8_fp4_paged_mqa_logits(q=(q_fp8, None), kv_cache=kv_fp8, weights=weights, context_lens=context_lens, block_tables=block_table, schedule_metadata=schedule_meta, max_model_len=MAX_MODEL_LEN)",
+fused_deepseek_v4_qnorm_rope_kv_rope_quant_insert,test_fused_deepseek_v4_qnorm_rope_kv_rope_quant_insert.py,vLLM接口,torch.ops._C.fused_deepseek_v4_qnorm_rope_kv_rope_quant_insert (vLLM C++扩展),import: import vllm._custom_ops  # 加载 torch.ops._C (通过 hasattr 探测)  调用: torch.ops._C.fused_deepseek_v4_qnorm_rope_kv_rope_quant_insert(...),"[[4096,8,512],[4096,512],[50312,37376],[4096],[4096],[1048576,64],[],[],[]]
+[[4096,8,512],[4096,512],[50314,37376],[4096],[4096],[1048576,64],[],[],[]]
+[[4096,8,512],[4096,512],[50438,37376],[4096],[4096],[1048576,64],[],[],[]]
+[[5089,8,512],[5089,512],[50312,37376],[5089],[5089],[1048576,64],[],[],[]]
+[[5089,8,512],[5089,512],[50314,37376],[5089],[5089],[1048576,64],[],[],[]]
+[[5089,8,512],[5089,512],[50438,37376],[5089],[5089],[1048576,64],[],[],[]]
+[[8192,8,512],[8192,512],[50312,37376],[8192],[8192],[1048576,64],[],[],[]]
+[[8192,8,512],[8192,512],[50314,37376],[8192],[8192],[1048576,64],[],[],[]]
+[[8192,8,512],[8192,512],[50438,37376],[8192],[8192],[1048576,64],[],[],[]]"
+fused_experts_impl,test_fused_moe.py,vLLM接口,vllm.model_executor.layers.fused_moe.fused_moe.fused_experts_impl,"import: from vllm.model_executor.layers.fused_moe.fused_moe import fused_experts_impl  调用: fused_experts_impl(hidden_states.clone(), w1, w2, topk_weights, topk_ids, inplace=False, activation=""silu"")",
+indexer_k_quant_and_cache,test_indexer_k_quant_and_cache.py,vLLM接口,vllm._custom_ops,"import: import vllm._custom_ops as ops  调用: ops.indexer_k_quant_and_cache(k, kv_cache, slot_mapping, quant_block_size, scale_fmt)",
+pack_seq_triton,test_pack_seq.py,vLLM接口,vllm.v1.attention.ops.common.pack_seq_triton,import: from vllm.v1.attention.ops.common import pack_seq_triton  调用: pack_seq_triton(...)  # 作为 torch_op 直接传入,
+persistent_topk,test_persistent_topk.py,vLLM接口,torch.ops._C.persistent_topk (vLLM C++扩展),"import: import vllm._custom_ops  # 加载 torch.ops._C  调用: torch.ops._C.persistent_topk(logits, lengths, indices, workspace, K, max_seq_len)","[[34,8192],[34,1],[34,512],[1048576],[],[]]
+[[36,8192],[36,1],[36,512],[1048576],[],[]]
+[[38,8192],[38,1],[38,512],[1048576],[],[]]
+[[40,8192],[40,1],[40,512],[1048576],[],[]]
+[[42,8192],[42,1],[42,512],[1048576],[],[]]
+[[44,8192],[44,1],[44,512],[1048576],[],[]]
+[[46,8192],[46,1],[46,512],[1048576],[],[]]
+[[48,8192],[48,1],[48,512],[1048576],[],[]]
+[[50,8192],[50,1],[50,512],[1048576],[],[]]
+[[52,8192],[52,1],[52,512],[1048576],[],[]]
+[[54,8192],[54,1],[54,512],[1048576],[],[]]
+[[56,8192],[56,1],[56,512],[1048576],[],[]]
+[[58,8192],[58,1],[58,512],[1048576],[],[]]
+[[60,8192],[60,1],[60,512],[1048576],[],[]]
+[[62,8192],[62,1],[62,512],[1048576],[],[]]"
+top_k_per_row_decode,test_top_k_per_row_decode.py,vLLM接口(torch兜底),优先 vllm._custom_ops CUDA kernel；无 vLLM 时回退 torch.topk,"import: import vllm._custom_ops  # 加载 torch.ops._C  调用: torch.ops._C.top_k_per_row_decode(logits, next_n, seq_lens, indices, num_rows, stride0, stride1, top_k)",
+topk_softplus_sqrt,test_topk_softplus_sqrt.py,vLLM接口(torch兜底),优先 vllm._custom_ops.topk_hash_softplus_sqrt；无 vLLM 时回退 torch 参考,"import: from vllm._custom_ops import topk_hash_softplus_sqrt  调用: topk_hash_softplus_sqrt(topk_weights, topk_indices, token_expert_indices, gating_output, renormalize, routed_scaling_factor, correction_bias, input_ids, tid2eid)","[[4096,6],[4096,6],[4096,6],[4096,256],[],[],[],[],[]]
+[[4096,6],[4096,6],[4096,6],[4096,256],[],[],[256],[],[]]
+[[5089,6],[5089,6],[5089,6],[5089,256],[],[],[],[],[]]
+[[5089,6],[5089,6],[5089,6],[5089,256],[],[],[256],[],[]]
+[[4096,6],[4096,6],[4096,6],[4096,256],[],[],[256],[4096],[]]
+[[5089,6],[5089,6],[5089,6],[5089,256],[],[],[256],[5089],[]]
+[[8192,6],[8192,6],[8192,6],[8192,256],[],[],[],[],[]]
+[[8192,6],[8192,6],[8192,6],[8192,256],[],[],[256],[],[]]
+[[8192,6],[8192,6],[8192,6],[8192,256],[],[],[256],[8192],[]]
+[[4096,6],[4096,6],[4096,6],[4096,256],[],[],[],[4096],[129280,6]]
+[[5089,6],[5089,6],[5089,6],[5089,256],[],[],[],[5089],[129280,6]]
+[[8192,6],[8192,6],[8192,6],[8192,256],[],[],[],[8192],[129280,6]]"
+_qsa_merge_splitk_kernel,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+_qsa_sparse_paged_gqa_splitk_kernel,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+apply_top_k_top_p,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+causal_conv1d_fn,test_causal_conv1d_fn.py,torch实现,逐序列 F.conv1d 循环参考 (causal_conv1d_seq_ref),-,
+causal_conv1d_update,test_causal_conv1d_update.py,torch实现,批量 F.conv1d 参考 (_causal_conv1d_update_torch),-,"[[1,4096],[1,16],[1,16],[1,16,128],[],[]]
+[[2,4096],[2,16],[2,16],[2,16,128],[],[]]
+[[3,4096],[3,16],[3,16],[3,16,128],[],[]]
+[[4,4096],[4,16],[4,16],[4,16,128],[],[]]
+[[5,4096],[5,16],[5,16],[5,16,128],[],[]]
+[[6,4096],[6,16],[6,16],[6,16,128],[],[]]
+[[7,4096],[7,16],[7,16],[7,16,128],[],[]]
+[[8,4096],[8,16],[8,16],[8,16,128],[],[]]
+[[9,4096],[9,16],[9,16],[9,16,128],[],[]]
+[[10,4096],[10,16],[10,16],[10,16,128],[],[]]
+[[11,4096],[11,16],[11,16],[11,16,128],[],[]]
+[[12,4096],[12,16],[12,16],[12,16,128],[],[]]
+[[13,4096],[13,16],[13,16],[13,16,128],[],[]]
+[[14,4096],[14,16],[14,16],[14,16,128],[],[]]
+[[15,4096],[15,16],[15,16],[15,16,128],[],[]]
+[[16,4096],[16,16],[16,16],[16,16,128],[],[]]
+[[17,4096],[17,16],[17,16],[17,16,128],[],[]]
+[[18,4096],[18,16],[18,16],[18,16,128],[],[]]
+[[19,4096],[19,16],[19,16],[19,16,128],[],[]]
+[[20,4096],[20,16],[20,16],[20,16,128],[],[]]
+[[21,4096],[21,16],[21,16],[21,16,128],[],[]]
+[[22,4096],[22,16],[22,16],[22,16,128],[],[]]
+[[23,4096],[23,16],[23,16],[23,16,128],[],[]]
+[[24,4096],[24,16],[24,16],[24,16,128],[],[]]
+[[25,4096],[25,16],[25,16],[25,16,128],[],[]]
+[[26,4096],[26,16],[26,16],[26,16,128],[],[]]
+[[27,4096],[27,16],[27,16],[27,16,128],[],[]]
+[[28,4096],[28,16],[28,16],[28,16,128],[],[]]
+[[29,4096],[29,16],[29,16],[29,16,128],[],[]]
+[[30,4096],[30,16],[30,16],[30,16,128],[],[]]
+[[31,4096],[31,16],[31,16],[31,16,128],[],[]]
+[[32,4096],[32,16],[32,16],[32,16,128],[],[]]
+[[33,4096],[33,16],[33,16],[33,16,128],[],[]]
+[[34,4096],[34,16],[34,16],[34,16,128],[],[]]
+[[35,4096],[35,16],[35,16],[35,16,128],[],[]]
+[[36,4096],[36,16],[36,16],[36,16,128],[],[]]
+[[37,4096],[37,16],[37,16],[37,16,128],[],[]]
+[[38,4096],[38,16],[38,16],[38,16,128],[],[]]
+[[39,4096],[39,16],[39,16],[39,16,128],[],[]]
+[[40,4096],[40,16],[40,16],[40,16,128],[],[]]
+[[41,4096],[41,16],[41,16],[41,16,128],[],[]]
+[[42,4096],[42,16],[42,16],[42,16,128],[],[]]
+[[43,4096],[43,16],[43,16],[43,16,128],[],[]]
+[[44,4096],[44,16],[44,16],[44,16,128],[],[]]
+[[45,4096],[45,16],[45,16],[45,16,128],[],[]]
+[[46,4096],[46,16],[46,16],[46,16,128],[],[]]
+[[47,4096],[47,16],[47,16],[47,16,128],[],[]]
+[[48,4096],[48,16],[48,16],[48,16,128],[],[]]
+[[49,4096],[49,16],[49,16],[49,16,128],[],[]]
+[[50,4096],[50,16],[50,16],[50,16,128],[],[]]
+[[51,4096],[51,16],[51,16],[51,16,128],[],[]]
+[[52,4096],[52,16],[52,16],[52,16,128],[],[]]
+[[53,4096],[53,16],[53,16],[53,16,128],[],[]]
+[[54,4096],[54,16],[54,16],[54,16,128],[],[]]
+[[55,4096],[55,16],[55,16],[55,16,128],[],[]]
+[[56,4096],[56,16],[56,16],[56,16,128],[],[]]
+[[57,4096],[57,16],[57,16],[57,16,128],[],[]]
+[[58,4096],[58,16],[58,16],[58,16,128],[],[]]
+[[59,4096],[59,16],[59,16],[59,16,128],[],[]]
+[[60,4096],[60,16],[60,16],[60,16,128],[],[]]
+[[61,4096],[61,16],[61,16],[61,16,128],[],[]]
+[[62,4096],[62,16],[62,16],[62,16,128],[],[]]
+[[63,4096],[63,16],[63,16],[63,16,128],[],[]]
+[[64,4096],[64,16],[64,16],[64,16,128],[],[]]"
+chunk_gdn2,test_FLA/test_chunk_gdn2.py,原生Triton基准,原生 Triton 路径 (BT=64) 作基准，对比 TLE 封装,-,
+chunk_gla,test_FLA/test_chunk_gla_perf.py,第三方库(fla),可选 fla.ops.gla.chunk_gla 参考；未装 fla 时仅测 gems,-,
+chunk_kda,test_FLA/test_chunk_kda.py,torch实现,_chunk_kda_torch_reference_op 手写参考,-,
+compressor,未找到对应benchmark,-,仅在 src/flaggems_vllm/ops/fused_indexer_q_rope_quant.py 出现，无独立 benchmark,-,
+flash_attn_varlen_func_w8a8_fp8,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+flash_mla_sparse_fwd_w8a8_fp8,未找到对应benchmark,-,test_flash_mla_sparse_fwd.py 用 vLLM 基准但非 w8a8_fp8 变体,-,
+flash_mla_with_kvcache,test_flash_mla_with_kvcache.py,vLLM接口,vllm.third_party.flashmla.flash_mla_interface,"import: from vllm.third_party.flashmla.flash_mla_interface import flash_mla_with_kvcache, get_mla_metadata  调用: meta, _ = get_mla_metadata(); flash_mla_with_kvcache(q, k_cache, block_table, cache_seqlens, head_dim_v, meta, **kwargs)",
+flash_mla_with_kvcache_fwd_w8a8_fp8,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+fp8_einsum,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+fused_deepseek_v4_qnorm_rope_kv_rope_insert,未找到对应benchmark,-,仅有 ..._quant_insert 版本，无 ..._insert 版本,-,
+fused_inv_rope_fp8_quant,test_fused_inv_rope_fp8_quant.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops.fused_inv_rope_fp8_quant,import: from vllm.v1.attention.ops.deepseek_v4_ops import fused_inv_rope_fp8_quant  调用: fused_inv_rope_fp8_quant(...)  # 作为 torch_op 直接传入,"【注:模糊匹配,该算子与相关融合kernel同名,shape可能不完全对应,待确认】
+[[4096,8,512],[4096],[1048576,64],[],[],[],[],[],[],[],[],[],[],[],[]]
+[[5089,8,512],[5089],[1048576,64],[],[],[],[],[],[],[],[],[],[],[],[]]
+[[8192,8,512],[8192],[1048576,64],[],[],[],[],[],[],[],[],[],[],[],[]]"
+fused_marlin_moe_w4a16_int4,test_fused_marlin_moe_w4a16_int4.py,vLLM接口,vllm fused_marlin_moe (_vllm_baseline),"import: from vllm.model_executor.layers.fused_moe.fused_marlin_moe import fused_marlin_moe; from vllm.scalar_type import scalar_types  调用: fused_marlin_moe(hidden_states=..., w1=w1_q_marlin, w2=w2_q_marlin, bias1=None, bias2=None, w1_scale=..., w2_scale=..., topk_weights=..., topk_ids=..., quant_type_id=scalar_types.uint4b8.id)",
+fused_marlin_moe_w4a16_mxfp4,test_fused_marlin_moe_w4a16_mxfp4.py,vLLM接口,vllm fused_marlin_moe (_vllm_baseline_mxfp4),"import: from vllm.model_executor.layers.fused_moe.fused_marlin_moe import fused_marlin_moe; from vllm.scalar_type import scalar_types  调用: fused_marlin_moe(hidden_states=..., w1=w1_q_marlin, w2=w2_q_marlin, bias1=None, bias2=None, w1_scale=..., w2_scale=..., topk_weights=..., topk_ids=..., quant_type_id=<FP4 type>.id)",
+fused_marlin_moe_w8a16_fp8,未找到对应benchmark,-,仅有 w8a16_int8 版本，无 w8a16_fp8 版本,-,
+fused_marlin_moe_w8a16_int8,test_fused_marlin_moe_w8a16_int8.py,vLLM接口,vllm fused_marlin_moe (_vllm_baseline_int8),"import: from vllm.model_executor.layers.fused_moe.fused_marlin_moe import fused_marlin_moe; from vllm.scalar_type import scalar_types  调用: fused_marlin_moe(hidden_states=..., w1=w1_q_marlin, w2=w2_q_marlin, w1_scale=..., w2_scale=..., topk_weights=..., topk_ids=..., quant_type_id=<int8 type>.id)",
+gemma_rms_norm,test_qwen4_self_kernels.py,torch实现,对应 qwen4_grouped_gemma_rmsnorm，baseline 为 _torch_grouped_rmsnorm (名称不完全一致，待确认),-,
+kv_rmsnorm_rope_cache,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+lightning_indexer,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+MegaGDR,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+megamoe,未找到对应benchmark,-,仅有 stage_deepseek_v4_mega_moe_inputs (相关但不同),-,
+MegaPreAttention,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+moe_align_block_size,test_moe_align_block_size_triton.py,vLLM接口,vllm._custom_ops.moe_align_block_size,import: import vllm._custom_ops as vllm_ops  调用: vllm_ops.moe_align_block_size(...)  # 作为 torch_op 直接传入,"[[10,8],[],[],[1280],[80],[1],[]]
+[[12,8],[],[],[1536],[96],[1],[]]
+[[14,8],[],[],[1792],[112],[1],[]]
+[[16,8],[],[],[2048],[128],[1],[]]
+[[18,8],[],[],[2304],[144],[1],[]]
+[[20,8],[],[],[2560],[160],[1],[]]
+[[22,8],[],[],[2816],[176],[1],[]]
+[[24,8],[],[],[3072],[192],[1],[]]
+[[26,8],[],[],[3328],[208],[1],[]]
+[[28,8],[],[],[3584],[224],[1],[]]
+[[30,8],[],[],[3840],[240],[1],[]]
+[[32,8],[],[],[4096],[256],[1],[]]
+[[34,8],[],[],[8208],[257],[1],[]]
+[[36,8],[],[],[8224],[257],[1],[]]
+[[38,8],[],[],[8240],[258],[1],[]]
+[[40,8],[],[],[8256],[258],[1],[]]
+[[42,8],[],[],[8272],[259],[1],[]]
+[[44,8],[],[],[8288],[259],[1],[]]
+[[46,8],[],[],[8304],[260],[1],[]]
+[[48,8],[],[],[8320],[260],[1],[]]
+[[50,8],[],[],[8336],[261],[1],[]]
+[[52,8],[],[],[8352],[261],[1],[]]
+[[54,8],[],[],[8368],[262],[1],[]]
+[[56,8],[],[],[8384],[262],[1],[]]
+[[58,8],[],[],[8400],[263],[1],[]]
+[[60,8],[],[],[8416],[263],[1],[]]
+[[62,8],[],[],[8432],[264],[1],[]]
+[[63,8],[],[],[8440],[264],[1],[]]
+[[64,8],[],[],[8448],[264],[1],[]]
+[[1000,8],[],[],[40512],[317],[1],[]]
+[[4096,6],[],[],[40704],[636],[1],[]]
+[[5089,6],[],[],[46662],[730],[1],[]]
+[[4096,8],[],[],[65280],[510],[1],[]]
+[[4097,8],[],[],[65288],[511],[1],[]]
+[[4103,8],[],[],[65336],[511],[1],[]]
+[[4104,8],[],[],[65344],[511],[1],[]]
+[[4105,8],[],[],[65352],[511],[1],[]]
+[[4115,8],[],[],[65432],[512],[1],[]]
+[[8192,6],[],[],[65280],[1020],[1],[]]
+[[5089,8],[],[],[73224],[573],[1],[]]
+[[8192,8],[],[],[98048],[766],[1],[]]"
+qsa_pre_indexer,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+qsa_select_paged_decode,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+qsa_select_paged_prefill,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+quant_lightning_indexer,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+SparseAttnSharedKv,未找到对应benchmark,-,benchmark 目录下未见对应用例,-,
+w8a8_block_fp8_matmul,test_blas_perf_parallel.py,vLLM接口,vllm fp8_utils.w8a8_triton_block_scaled_mm (另有 deep_gemm 变体),import: from vllm.model_executor.layers.quantization.utils.fp8_utils import w8a8_triton_block_scaled_mm  调用: w8a8_triton_block_scaled_mm(...)  # 作为 torch_op 直接传入,

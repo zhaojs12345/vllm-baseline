@@ -1,0 +1,61 @@
+算子名称,对应benchmark文件,baseline实现方式,baseline说明,vLLM接口调用方式(CUDA)
+add_rms_norm,test_add_rms_norm.py,torch实现,手写 (x1+x2) 后做 RMSNorm；ascend 厂商改用 torch_npu.npu_add_rms_norm,-
+mhc_post,test_mhc.py,torch实现,仓库自研 torch 参考 mhc_post_ref (flaggems_vllm.ops.mhc.mhc_post),-
+mhc_pre,test_mhc.py,torch实现,仓库自研 torch 参考 mhc_pre_ref (flaggems_vllm.ops.mhc.mhc_pre),-
+moe_sum,test_moe_sum.py,torch实现,output.copy_(input.sum(dim=1)),-
+silu_and_mul_with_clamp,test_silu_and_mul_with_clamp.py,torch实现,torch.clamp + F.silu + torch.mul 手写,-
+fused_add_rms_norm,test_fused_add_rms_norm.py,vLLM接口(厂商相关),nvidia 用 vllm C/CUDA fused_add_rms_norm；mthreads 用 musa_fused_add_rms_norm；其余厂商回退 torch 参考,"import: from vllm import _custom_ops as vendor_ops  调用: vendor_ops.fused_add_rms_norm(x, residual, weight, eps)  # 原地更新 x/residual"
+grouped_topk,test_grouped_topk.py,torch实现,ref_grouped_topk：移植自 vLLM grouped_topk_router 的纯 torch 实现,-
+per_token_group_quant_fp8,test_per_token_group_quant_fp8.py,vLLM接口,vllm fp8_utils.per_token_group_quant_fp8,"import: from vllm.model_executor.layers.quantization.utils.fp8_utils import per_token_group_quant_fp8  调用: per_token_group_quant_fp8(x, group_size, use_ue8m0=scale_ue8m0)"
+combine_topk_swa_indices,test_deepseek_v4_attention_combine_topk_swa_indices.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops,"import: from vllm.v1.attention.ops.deepseek_v4_ops import combine_topk_swa_indices  调用: combine_topk_swa_indices(...)  # 作为 base.Benchmark 的 torch_op 直接传入"
+compute_global_topk_indices_and_lens,test_deepseek_v4_attention_compute_global_topk_indices_and_lens.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops,"import: from vllm.v1.attention.ops.deepseek_v4_ops import compute_global_topk_indices_and_lens  调用: compute_global_topk_indices_and_lens(...)  # 作为 torch_op 直接传入"
+fused_q_kv_rmsnorm,test_deepseek_v4_attention_fused_q_kv_rmsnorm.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops.fused_q_kv_rmsnorm,"import: from vllm.v1.attention.ops.deepseek_v4_ops import fused_q_kv_rmsnorm  调用: fused_q_kv_rmsnorm(...)  # 作为 torch_op 直接传入"
+top_k_per_row_prefill,test_top_k_per_row_prefill.py,torch实现,_torch_topk_ref：直接 torch.topk (无 masking),-
+unpack_seq_triton,test_unpack_seq.py,vLLM接口,vllm.v1.attention.ops.common.unpack_seq_triton,"import: from vllm.v1.attention.ops.common import unpack_seq_triton  调用: unpack_seq_triton(...)  # 作为 torch_op 直接传入"
+chunk_gated_delta_rule_fwd,test_FLA/test_chunk_gated_delta_rule_fwd.py,原生Triton基准,_native_gdn_fwd：仓库原生 Triton 实现作基准,-
+cp_gather_indexer_k_quant_cache,test_cp_gather_indexer_k_quant_cache.py,vLLM接口,vllm._custom_ops,"import: import vllm._custom_ops as ops  调用: ops.cp_gather_indexer_k_quant_cache(kv_cache, dst_k, dst_scale, block_table, cu_seq_lens)"
+dequantize_and_gather_k_cache,test_deepseek_v4_attention_dequantize_and_gather_k_cache.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops,"import: from vllm.v1.attention.ops.deepseek_v4_ops import dequantize_and_gather_k_cache  调用: dequantize_and_gather_k_cache(out, k_cache, seq_lens, gather_lens, block_table, block_size, offset)"
+flash_attn_varlen_func,test_flash_attn_varlen_func.py,vLLM接口,vllm.vllm_flash_attn.flash_attn_interface.flash_attn_varlen_func,"import: from vllm.vllm_flash_attn.flash_attn_interface import flash_attn_varlen_func  调用: flash_attn_varlen_func(...)  # 作为 torch_op 直接传入"
+flash_mla,test_flash_mla.py,torch实现,ref_mla 手写参考实现,-
+fp8_fp4_mqa_logits,test_fp8_fp4_mqa_logits.py,vLLM接口,vllm.utils.deep_gemm.fp8_fp4_mqa_logits,"import: from vllm.utils.deep_gemm import fp8_fp4_mqa_logits  调用: fp8_fp4_mqa_logits(q=(q_fp8, None), kv=(k_fp8, k_scale), weights=weights, cu_seqlen_ks=ks, cu_seqlen_ke=ke, clean_logits=True)"
+fp8_fp4_paged_mqa_logits,test_fp8_fp4_paged_mqa_logits.py,vLLM接口,vllm.utils.deep_gemm (paged 版本),"import: from vllm.utils.deep_gemm import fp8_fp4_paged_mqa_logits, get_paged_mqa_logits_metadata  调用: fp8_fp4_paged_mqa_logits(q=(q_fp8, None), kv_cache=kv_fp8, weights=weights, context_lens=context_lens, block_tables=block_table, schedule_metadata=schedule_meta, max_model_len=MAX_MODEL_LEN)"
+fused_deepseek_v4_qnorm_rope_kv_rope_quant_insert,test_fused_deepseek_v4_qnorm_rope_kv_rope_quant_insert.py,vLLM接口,torch.ops._C.fused_deepseek_v4_qnorm_rope_kv_rope_quant_insert (vLLM C++扩展),"import: import vllm._custom_ops  # 加载 torch.ops._C (通过 hasattr 探测)  调用: torch.ops._C.fused_deepseek_v4_qnorm_rope_kv_rope_quant_insert(...)"
+fused_experts_impl,test_fused_moe.py,vLLM接口,vllm.model_executor.layers.fused_moe.fused_moe.fused_experts_impl,"import: from vllm.model_executor.layers.fused_moe.fused_moe import fused_experts_impl  调用: fused_experts_impl(hidden_states.clone(), w1, w2, topk_weights, topk_ids, inplace=False, activation=""silu"")"
+indexer_k_quant_and_cache,test_indexer_k_quant_and_cache.py,vLLM接口,vllm._custom_ops,"import: import vllm._custom_ops as ops  调用: ops.indexer_k_quant_and_cache(k, kv_cache, slot_mapping, quant_block_size, scale_fmt)"
+pack_seq_triton,test_pack_seq.py,vLLM接口,vllm.v1.attention.ops.common.pack_seq_triton,"import: from vllm.v1.attention.ops.common import pack_seq_triton  调用: pack_seq_triton(...)  # 作为 torch_op 直接传入"
+persistent_topk,test_persistent_topk.py,vLLM接口,torch.ops._C.persistent_topk (vLLM C++扩展),"import: import vllm._custom_ops  # 加载 torch.ops._C  调用: torch.ops._C.persistent_topk(logits, lengths, indices, workspace, K, max_seq_len)"
+top_k_per_row_decode,test_top_k_per_row_decode.py,vLLM接口(torch兜底),优先 vllm._custom_ops CUDA kernel；无 vLLM 时回退 torch.topk,"import: import vllm._custom_ops  # 加载 torch.ops._C  调用: torch.ops._C.top_k_per_row_decode(logits, next_n, seq_lens, indices, num_rows, stride0, stride1, top_k)"
+topk_softplus_sqrt,test_topk_softplus_sqrt.py,vLLM接口(torch兜底),优先 vllm._custom_ops.topk_hash_softplus_sqrt；无 vLLM 时回退 torch 参考,"import: from vllm._custom_ops import topk_hash_softplus_sqrt  调用: topk_hash_softplus_sqrt(topk_weights, topk_indices, token_expert_indices, gating_output, renormalize, routed_scaling_factor, correction_bias, input_ids, tid2eid)"
+_qsa_merge_splitk_kernel,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+_qsa_sparse_paged_gqa_splitk_kernel,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+apply_top_k_top_p,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+causal_conv1d_fn,test_causal_conv1d_fn.py,torch实现,逐序列 F.conv1d 循环参考 (causal_conv1d_seq_ref),-
+causal_conv1d_update,test_causal_conv1d_update.py,torch实现,批量 F.conv1d 参考 (_causal_conv1d_update_torch),-
+chunk_gdn2,test_FLA/test_chunk_gdn2.py,原生Triton基准,原生 Triton 路径 (BT=64) 作基准，对比 TLE 封装,-
+chunk_gla,test_FLA/test_chunk_gla_perf.py,第三方库(fla),可选 fla.ops.gla.chunk_gla 参考；未装 fla 时仅测 gems,-
+chunk_kda,test_FLA/test_chunk_kda.py,torch实现,_chunk_kda_torch_reference_op 手写参考,-
+compressor,未找到对应benchmark,-,仅在 src/flaggems_vllm/ops/fused_indexer_q_rope_quant.py 出现，无独立 benchmark,-
+flash_attn_varlen_func_w8a8_fp8,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+flash_mla_sparse_fwd_w8a8_fp8,未找到对应benchmark,-,test_flash_mla_sparse_fwd.py 用 vLLM 基准但非 w8a8_fp8 变体,-
+flash_mla_with_kvcache,test_flash_mla_with_kvcache.py,vLLM接口,vllm.third_party.flashmla.flash_mla_interface,"import: from vllm.third_party.flashmla.flash_mla_interface import flash_mla_with_kvcache, get_mla_metadata  调用: meta, _ = get_mla_metadata(); flash_mla_with_kvcache(q, k_cache, block_table, cache_seqlens, head_dim_v, meta, **kwargs)"
+flash_mla_with_kvcache_fwd_w8a8_fp8,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+fp8_einsum,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+fused_deepseek_v4_qnorm_rope_kv_rope_insert,未找到对应benchmark,-,仅有 ..._quant_insert 版本，无 ..._insert 版本,-
+fused_inv_rope_fp8_quant,test_fused_inv_rope_fp8_quant.py,vLLM接口,vllm.v1.attention.ops.deepseek_v4_ops.fused_inv_rope_fp8_quant,"import: from vllm.v1.attention.ops.deepseek_v4_ops import fused_inv_rope_fp8_quant  调用: fused_inv_rope_fp8_quant(...)  # 作为 torch_op 直接传入"
+fused_marlin_moe_w4a16_int4,test_fused_marlin_moe_w4a16_int4.py,vLLM接口,vllm fused_marlin_moe (_vllm_baseline),"import: from vllm.model_executor.layers.fused_moe.fused_marlin_moe import fused_marlin_moe; from vllm.scalar_type import scalar_types  调用: fused_marlin_moe(hidden_states=..., w1=w1_q_marlin, w2=w2_q_marlin, bias1=None, bias2=None, w1_scale=..., w2_scale=..., topk_weights=..., topk_ids=..., quant_type_id=scalar_types.uint4b8.id)"
+fused_marlin_moe_w4a16_mxfp4,test_fused_marlin_moe_w4a16_mxfp4.py,vLLM接口,vllm fused_marlin_moe (_vllm_baseline_mxfp4),"import: from vllm.model_executor.layers.fused_moe.fused_marlin_moe import fused_marlin_moe; from vllm.scalar_type import scalar_types  调用: fused_marlin_moe(hidden_states=..., w1=w1_q_marlin, w2=w2_q_marlin, bias1=None, bias2=None, w1_scale=..., w2_scale=..., topk_weights=..., topk_ids=..., quant_type_id=<FP4 type>.id)"
+fused_marlin_moe_w8a16_fp8,未找到对应benchmark,-,仅有 w8a16_int8 版本，无 w8a16_fp8 版本,-
+fused_marlin_moe_w8a16_int8,test_fused_marlin_moe_w8a16_int8.py,vLLM接口,vllm fused_marlin_moe (_vllm_baseline_int8),"import: from vllm.model_executor.layers.fused_moe.fused_marlin_moe import fused_marlin_moe; from vllm.scalar_type import scalar_types  调用: fused_marlin_moe(hidden_states=..., w1=w1_q_marlin, w2=w2_q_marlin, w1_scale=..., w2_scale=..., topk_weights=..., topk_ids=..., quant_type_id=<int8 type>.id)"
+gemma_rms_norm,test_qwen4_self_kernels.py,torch实现,对应 qwen4_grouped_gemma_rmsnorm，baseline 为 _torch_grouped_rmsnorm (名称不完全一致，待确认),-
+kv_rmsnorm_rope_cache,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+lightning_indexer,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+MegaGDR,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+megamoe,未找到对应benchmark,-,仅有 stage_deepseek_v4_mega_moe_inputs (相关但不同),-
+MegaPreAttention,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+moe_align_block_size,test_moe_align_block_size_triton.py,vLLM接口,vllm._custom_ops.moe_align_block_size,"import: import vllm._custom_ops as vllm_ops  调用: vllm_ops.moe_align_block_size(...)  # 作为 torch_op 直接传入"
+qsa_pre_indexer,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+qsa_select_paged_decode,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+qsa_select_paged_prefill,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+quant_lightning_indexer,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+SparseAttnSharedKv,未找到对应benchmark,-,benchmark 目录下未见对应用例,-
+w8a8_block_fp8_matmul,test_blas_perf_parallel.py,vLLM接口,vllm fp8_utils.w8a8_triton_block_scaled_mm (另有 deep_gemm 变体),"import: from vllm.model_executor.layers.quantization.utils.fp8_utils import w8a8_triton_block_scaled_mm  调用: w8a8_triton_block_scaled_mm(...)  # 作为 torch_op 直接传入"
