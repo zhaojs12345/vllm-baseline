@@ -195,8 +195,9 @@ def _empty_result(report_path=None):
 
 
 def _build_profile_script(module, symbol, resolved_inputs, warmup):
-    """临时脚本：解析 native callable，warmup 若干次后跑 1 次目标 op，供 NCU
-    以 --launch-skip=warmup --launch-count=1 锁定最后一次 launch。
+    """临时脚本：解析 native callable，warmup 若干次后把最后一次目标调用包在
+    NVTX range "kiro_target" 里，供 NCU 用 --nvtx-include 精确锁定这次调用发出的
+    kernel（不受 randn 等辅助 kernel 的 launch 序号干扰）。
 
     脚本自包含（子进程独立运行），把本模块的 resolver 逻辑内联进去；输入按
     resolved_inputs 的具体描述用 randn/标量重建。对原地算子，被采样的那次调用
@@ -249,8 +250,13 @@ args = _make_args()
 for _ in range({warmup}):
     op(*args)
 torch.cuda.synchronize()
+# 重建实参（避免原地算子的 warmup 累积污染），随后仅把这一次目标调用圈进
+# NVTX range，NCU 用 --nvtx-include "kiro_target/" 精确采样它发出的 kernel。
 args = _make_args()
+torch.cuda.synchronize()
+torch.cuda.nvtx.range_push("kiro_target")
 op(*args)
+torch.cuda.nvtx.range_pop()
 torch.cuda.synchronize()
 """
 
@@ -298,12 +304,17 @@ def profile_with_ncu(op_name, module, symbol, resolved_inputs, shape,
     report_dir.mkdir(parents=True, exist_ok=True)
     tag = f"{op_name}_{'x'.join(map(str, shape))}_{dtype_str.split('.')[-1]}"
     report_base = report_dir / tag
-    report_path = f"{report_base}.ncu-rep"
+
+    def _err_msg(cp):
+        # ncu 的 ==ERROR== 常写到 stdout；stderr 为空时回退取 stdout，避免空报错。
+        return ((cp.stderr or "").strip() or (cp.stdout or "").strip())[:300]
 
     try:
+        # 用 NVTX range 锁定目标调用，不再靠全局 launch 序号（randn 等辅助 kernel
+        # 会打乱序号）。--nvtx-include 只采 "kiro_target" range 内发出的 kernel。
         export_cmd = [
             "ncu", "--metrics", ",".join(metrics),
-            "--launch-skip", str(warmup), "--launch-count", "1",
+            "--nvtx", "--nvtx-include", "kiro_target/",
             "--force-overwrite", "--export", str(report_base),
             sys.executable, script_path,
         ]
@@ -318,15 +329,23 @@ def profile_with_ncu(op_name, module, symbol, resolved_inputs, shape,
             return _empty_result()
         if proc.returncode != 0:
             print(f"  ✗ NCU profiling 失败 (code={proc.returncode}): "
-                  f"{proc.stderr.strip()[:200]}")
+                  f"{_err_msg(proc)}")
             return _empty_result()
+
+        # ncu 版本不同后缀不同（.ncu-rep 或压缩的 .ncu-repz），取实际生成的文件。
+        candidates = sorted(report_dir.glob(f"{tag}.ncu-rep*"),
+                            key=lambda p: p.stat().st_mtime, reverse=True)
+        if not candidates:
+            print(f"  ✗ NCU 未生成报告文件: {report_base}.ncu-rep[z]")
+            return _empty_result()
+        report_path = str(candidates[0])
 
         imp = subprocess.run(
             ["ncu", "--import", report_path, "--csv", "--page", "raw"],
             capture_output=True, text=True, timeout=120)
         if imp.returncode != 0:
             print(f"  ✗ NCU import 失败 (code={imp.returncode}): "
-                  f"{imp.stderr.strip()[:200]}")
+                  f"{_err_msg(imp)}")
             return _empty_result(report_path)
 
         agg = _parse_ncu_csv(imp.stdout, metrics)
