@@ -56,6 +56,12 @@ SM_UTIL = "sm__throughput.avg.pct_of_peak_sustained_elapsed"
 # 这份 yaml 驱动（方案B），逐步添加算子只改 yaml、不改本脚本。
 CONFIG_PATH = Path(__file__).with_name("baseline_shape.yaml")
 
+# 方案B（自定义 ops）：每个算子一个 Python 模块，自带 native()/grid()/
+# build_inputs()/key_shape()（契约见 ops/__init__.py）。采集器优先扫描此目录，
+# 复杂算子（元组入参、前置 metadata、量化预处理、约束张量等）用 Python 表达，
+# yaml 声明式路径保留给纯位置参数的简单算子直到全部迁完。
+OPS_DIR = Path(__file__).resolve().parent.parent / "ops"
+
 def resolve_native_op(module, symbol):
     """解析一个 NV 原生 callable；解析不到返回 None（该算子无基准，跳过）。
 
@@ -261,6 +267,46 @@ torch.cuda.synchronize()
 """
 
 
+def _build_profile_script_ops(ops_dir, op_module, binding, dtype_str, warmup):
+    """临时脚本（方案B ops 路径）：子进程把 ops 目录加进 sys.path，import 该
+    算子模块，用 build_inputs 重建实参、native 解析 callable，warmup 后把最后
+    一次目标调用圈进 NVTX range "kiro_target" 供 NCU 精确锁定。
+
+    脚本自包含（子进程独立运行）。对原地算子，被采样的那次调用前用 build_inputs
+    重新构造实参，避免 warmup 的原地累积污染数值——与 yaml 路径一致。
+    """
+    return f"""import sys
+import torch
+
+sys.path.insert(0, {str(ops_dir)!r})
+import {op_module} as opmod
+
+dtype = {dtype_str}
+binding = {binding!r}
+op = opmod.native()
+if op is None:
+    raise RuntimeError("native 解析失败: {op_module}")
+
+
+def _make_args():
+    return opmod.build_inputs(binding, dtype, "cuda")
+
+
+args, kwargs = _make_args()
+for _ in range({warmup}):
+    op(*args, **kwargs)
+torch.cuda.synchronize()
+# 重建实参（避免原地算子的 warmup 累积污染），随后仅把这一次目标调用圈进
+# NVTX range，NCU 用 --nvtx-include "kiro_target/" 精确采样它发出的 kernel。
+args, kwargs = _make_args()
+torch.cuda.synchronize()
+torch.cuda.nvtx.range_push("kiro_target")
+op(*args, **kwargs)
+torch.cuda.nvtx.range_pop()
+torch.cuda.synchronize()
+"""
+
+
 def _parse_ncu_csv(csv_text, wanted):
     """解析 `ncu --import --page raw --csv`（宽表：每 launch 一行，metric 为列）。
 
@@ -282,14 +328,16 @@ def _parse_ncu_csv(csv_text, wanted):
     return out
 
 
-def profile_with_ncu(op_name, module, symbol, resolved_inputs, shape,
-                     dtype_str, warmup=3, report_dir=None):
+def profile_with_ncu(op_name, profile_script, shape, dtype_str,
+                     report_dir=None):
     """NCU 分析目标算子，返回三维工作量/利用率/瓶颈。
 
     先 `ncu --export` 存 .ncu-rep（可用 ncu-ui 核对），再 `ncu --import --csv`
     解析。返回字段见 _empty_result；NCU 不可用或失败时各值为 0。
-    op_name/module/symbol/resolved_inputs 定位并重建被测算子；shape/dtype_str
-    仅用于命名报告与选 Tensor Core metric。
+    profile_script 是自包含的临时脚本文本（yaml 路径由 _build_profile_script、
+    ops 路径由 _build_profile_script_ops 生成），把目标调用圈进 NVTX range
+    "kiro_target" 供精确采样。shape/dtype_str 仅用于命名报告与选 Tensor Core
+    metric。
     """
     tensor_metric = FLOP_TENSOR_CORE.get(dtype_str)
     metrics = list(FLOP_CUDA_CORE) + [MEMORY_BYTES, *UTIL.values(), SM_UTIL]
@@ -297,7 +345,7 @@ def profile_with_ncu(op_name, module, symbol, resolved_inputs, shape,
         metrics.append(tensor_metric)
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-        f.write(_build_profile_script(module, symbol, resolved_inputs, warmup))
+        f.write(profile_script)
         script_path = f.name
 
     report_dir = Path(report_dir) if report_dir else Path(tempfile.gettempdir())
@@ -419,9 +467,13 @@ def _collect_one_op(op_name, op_cfg, ncu_enabled, report_dir):
             args = _instantiate_args(resolved)
             latency_ms = triton.testing.do_bench(lambda: op(*args),
                                                  warmup=25, rep=100)
-            ncu = (profile_with_ncu(op_name, module, symbol, resolved, shape,
-                                    dtype_str, report_dir=report_dir)
-                   if ncu_enabled else _empty_result())
+            if ncu_enabled:
+                script = _build_profile_script(module, symbol, resolved,
+                                               warmup=3)
+                ncu = profile_with_ncu(op_name, script, shape, dtype_str,
+                                       report_dir=report_dir)
+            else:
+                ncu = _empty_result()
             per_dtype[dtype_str] = {"latency_ms": latency_ms, **ncu}
 
             bn = ncu["bottleneck"]
@@ -432,9 +484,92 @@ def _collect_one_op(op_name, op_cfg, ncu_enabled, report_dir):
     return {"native_api": f"{module}.{symbol}", "shapes": shapes}
 
 
+def _discover_ops(ops_dir=OPS_DIR):
+    """扫描 ops/ 目录下的算子模块，import 并按契约校验后返回 [(name, module)]。
+
+    校验缺字段的模块直接跳过并告警（避免半成品模块把整轮采集带崩）。
+    """
+    if not ops_dir.is_dir():
+        return []
+    # 让 `import <op>` 能找到 ops/ 下的模块（子进程脚本也用同一目录）。
+    if str(ops_dir) not in sys.path:
+        sys.path.insert(0, str(ops_dir))
+    required = ("OP_NAME", "DTYPES", "IS_INPLACE",
+                "native", "grid", "build_inputs", "key_shape")
+    discovered = []
+    for path in sorted(ops_dir.glob("*.py")):
+        if path.stem == "__init__":
+            continue
+        try:
+            mod = importlib.import_module(path.stem)
+        except Exception as e:  # noqa: BLE001 - 单个模块坏了不该拖垮整轮
+            print(f"\n跳过 ops 模块 {path.stem}: import 失败（{str(e)[:80]}）")
+            continue
+        missing = [a for a in required if not hasattr(mod, a)]
+        if missing:
+            print(f"\n跳过 ops 模块 {path.stem}: 缺少契约字段 {missing}")
+            continue
+        discovered.append((mod.OP_NAME, mod))
+    return discovered
+
+
+def _collect_one_op_ops(op_module, ncu_enabled, report_dir):
+    """采集单个方案B（自定义 ops）算子；native 解析不到则返回 None（跳过）。"""
+    op_name = op_module.OP_NAME
+    mod_name = op_module.__name__
+    op = op_module.native()
+    if op is None:
+        print(f"\n跳过算子 {op_name}: ops 模块 native() 解析不到 callable")
+        return None
+
+    dtypes = op_module.DTYPES
+    bindings = op_module.grid()
+
+    # 预检：callable 可能只注册了 schema、没有 CUDA kernel，真调才暴露
+    # NotImplementedError。用第一个 shape/dtype 试调一次，没实现就整体跳过。
+    probe_args, probe_kwargs = op_module.build_inputs(
+        bindings[0], dtypes[0], "cuda")
+    try:
+        op(*probe_args, **probe_kwargs)
+        torch.cuda.synchronize()
+    except NotImplementedError as e:
+        print(f"\n跳过算子 {op_name}: native 无 CUDA 实现（{str(e)[:80]}）")
+        return None
+
+    shapes = {}
+    print(f"\n采集算子: {op_name}  (ops 模块 {mod_name})")
+    for binding in bindings:
+        shape = op_module.key_shape(binding)
+        per_dtype = shapes.setdefault(str(shape), {})
+        for dtype in dtypes:
+            dtype_str = str(dtype)
+            args, kwargs = op_module.build_inputs(binding, dtype, "cuda")
+            latency_ms = triton.testing.do_bench(
+                lambda: op(*args, **kwargs), warmup=25, rep=100)
+            if ncu_enabled:
+                script = _build_profile_script_ops(
+                    OPS_DIR, mod_name, binding, dtype_str, warmup=3)
+                ncu = profile_with_ncu(op_name, script, shape, dtype_str,
+                                       report_dir=report_dir)
+            else:
+                ncu = _empty_result()
+            per_dtype[dtype_str] = {"latency_ms": latency_ms, **ncu}
+
+            bn = ncu["bottleneck"]
+            suffix = (f"  瓶颈={bn} ({ncu['bottleneck_util']*100:.1f}%)"
+                      if bn else "")
+            print(f"  {shape} {dtype_str}: {latency_ms:.4f} ms{suffix}")
+
+    return {"native_api": f"ops.{mod_name}", "shapes": shapes}
+
+
 def collect_baseline(output_path, config_path=CONFIG_PATH, ncu_enabled=True,
                      report_dir=None):
-    """按 yaml 配置采集其中每个算子的 baseline 数据并写入 JSON。"""
+    """采集 baseline 数据并写入 JSON。
+
+    先跑方案B（ops/ 下的自定义算子模块），再跑 yaml 声明式路径（跳过已被 ops
+    覆盖的同名算子，ops 优先）。
+    """
     if not torch.cuda.is_available():
         raise RuntimeError("需要 CUDA 设备")
     device_name = torch.cuda.get_device_name()
@@ -442,9 +577,22 @@ def collect_baseline(output_path, config_path=CONFIG_PATH, ncu_enabled=True,
         print(f"警告: 当前设备 {device_name} 可能不是 NVIDIA 硬件")
     print(f"采集设备: {device_name}")
 
-    config = yaml.safe_load(Path(config_path).read_text())
     results = {}
+
+    # 方案B：ops/ 下的自定义算子模块优先。
+    ops_modules = _discover_ops()
+    for op_name, op_module in ops_modules:
+        entry = _collect_one_op_ops(op_module, ncu_enabled, report_dir)
+        if entry is not None:
+            results[op_name] = entry
+
+    # yaml 声明式路径：跳过已被 ops 覆盖的同名算子（ops 优先）。
+    covered = set(results)
+    config = yaml.safe_load(Path(config_path).read_text()) or {}
     for op_name, op_cfg in config.items():
+        if op_name in covered:
+            print(f"\n跳过 yaml 算子 {op_name}: 已由 ops/ 模块采集")
+            continue
         entry = _collect_one_op(op_name, op_cfg, ncu_enabled, report_dir)
         if entry is not None:
             results[op_name] = entry

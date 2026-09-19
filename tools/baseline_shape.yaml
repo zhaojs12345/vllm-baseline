@@ -24,6 +24,13 @@
 #   key_dims : 可选，用作 JSON 主键(对应 benchmark 的 shape)的维度列表；
 #       缺省取第一个 tensor 输入的 shape。
 
+# 说明：fused_add_rms_norm 与 grouped_topk 的实际调用已迁移到方案B
+# （ops/fused_add_rms_norm.py、ops/grouped_topk.py）。采集器 ops 优先，同名
+# 算子会走 ops/ 采集、这里的声明被跳过（不重复采集）。
+#
+# 本文件保留作为“每个算子 shape 的集中配置来源”——shape 可能随模型调整而变化，
+# 便于在此统一修改。当前 ops 模块暂用自带 grid，尚未接线读取本文件（暂时不用）。
+
 fused_add_rms_norm:
   # torch.ops._C.fused_add_rms_norm(input, residual, weight, eps)
   # input/residual 原地写回，无返回值。见 benchmark/test_fused_add_rms_norm.py。
