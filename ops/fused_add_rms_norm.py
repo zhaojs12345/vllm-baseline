@@ -71,3 +71,25 @@ def build_inputs(binding, dtype, device):
 
 def key_shape(binding):
     return [binding["M"], binding["N"]]
+
+
+def config(binding, dtype):
+    """真实输入输出 shape 描述（写入 JSON 的 config 字段）。
+
+    input/residual 原地写回，既是输入也是输出。
+    """
+    M, N = binding["M"], binding["N"]
+    dt = str(dtype)
+    return {
+        "inputs": {
+            "input": {"shape": [M, N], "dtype": dt, "note": "原地写回"},
+            "residual": {"shape": [M, N], "dtype": dt, "note": "原地写回"},
+            "weight": {"shape": [N], "dtype": dt},
+            "eps": {"scalar": _EPS},
+        },
+        "outputs": {
+            "input": {"shape": [M, N], "dtype": dt},
+            "residual": {"shape": [M, N], "dtype": dt},
+        },
+        "dims": {"M": M, "N": N},
+    }

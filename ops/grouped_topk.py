@@ -88,3 +88,30 @@ def build_inputs(binding, dtype, device):
 
 def key_shape(binding):
     return [binding["T"], binding["E"]]
+
+
+def config(binding, dtype):
+    """真实输入输出 shape 描述（写入 JSON 的 config 字段）。
+
+    输出 topk_weights/topk_ids 形状为 [T, topk]。
+    """
+    T, E = binding["T"], binding["E"]
+    dt = str(dtype)
+    return {
+        "inputs": {
+            "scores": {"shape": [T, E], "dtype": dt},
+            "n_group": {"scalar": _N_GROUP},
+            "topk_group": {"scalar": _TOPK_GROUP},
+            "topk": {"scalar": _TOPK},
+            "renormalize": {"scalar": _RENORMALIZE},
+            "routed_scaling_factor": {"scalar": _ROUTED_SCALING_FACTOR},
+            "bias": {"shape": [E], "dtype": "torch.float32"},
+            "scoring_func": {"scalar": _SCORING_FUNC},
+        },
+        "outputs": {
+            "topk_weights": {"shape": [T, _TOPK], "dtype": "torch.float32"},
+            "topk_ids": {"shape": [T, _TOPK], "dtype": "torch.int32"},
+        },
+        "dims": {"T": T, "E": E, "n_group": _N_GROUP,
+                 "topk_group": _TOPK_GROUP, "topk": _TOPK},
+    }

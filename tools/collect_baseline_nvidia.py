@@ -51,6 +51,11 @@ UTIL = {
     "memory_bw": "gpu__dram_throughput.avg.pct_of_peak_sustained_elapsed",
 }
 SM_UTIL = "sm__throughput.avg.pct_of_peak_sustained_elapsed"
+# 每 kernel GPU 执行时长：仅用于把 do_bench 测得的端到端 T 按比例拆到各 kernel
+# （多 kernel 复杂算子的 per_kernel 明细），比例口径与单位无关，故不做单位换算。
+DURATION = "gpu__time_duration.sum"
+# ncu raw csv 里的 kernel 名列。
+KERNEL_NAME_COL = "Kernel Name"
 
 # 采集哪些算子、每个算子的 native 调用坐标 / shape 网格 / 输入构造，全部由
 # 这份 yaml 驱动（方案B），逐步添加算子只改 yaml、不改本脚本。
@@ -189,12 +194,25 @@ def _key_shape(op_cfg, binding):
 
 
 def _empty_result(report_path=None):
-    """NCU 不可用/失败时的占位结果，字段与成功时一致。"""
+    """NCU 不可用/失败时的占位结果，字段与成功时一致。
+
+    字段命名对齐《算子后端缺失性能基准方案参考.md》的符号列表：
+      F_cuda / F_tensor  实际计算量 (FLOP)
+      B_mem              实际访存量 (Byte)
+      U_cuda / U_tensor / U_mem / U_bottle_neck  硬件利用率 (%, 0-100)
+      bottle_neck_unit   瓶颈单元（cuda / tensor / mem / null）
+    kernel 运行时间 T_us 由 do_bench 在采集侧填入（此处不含）。
+    """
     return {
+        # —— 文档口径字段 ——
+        "F_cuda": 0.0, "F_tensor": 0.0, "B_mem": 0.0,
+        "U_cuda": 0.0, "U_tensor": 0.0, "U_mem": 0.0,
+        "U_bottle_neck": 0.0, "bottle_neck_unit": None,
+        "num_kernels": 0, "per_kernel": [],
+        # —— 兼容旧字段（同值冗余，供既有下游读取） ——
         "flops_cuda_core": 0.0, "flops_tensor_core": 0.0, "memory_bytes": 0.0,
         "util_cuda_core": 0.0, "util_tensor_core": 0.0, "util_memory_bw": 0.0,
         "bottleneck": None, "bottleneck_util": 0.0,
-        # 旧字段：兼容 benchmark/base.py 现有归一化 speedup 公式。
         "cuda_flops": 0.0, "sm_utilization": 0.0,
         "report_path": report_path,
     }
@@ -310,22 +328,78 @@ torch.cuda.synchronize()
 def _parse_ncu_csv(csv_text, wanted):
     """解析 `ncu --import --page raw --csv`（宽表：每 launch 一行，metric 为列）。
 
-    返回 {metric: [数值, ...]}，跳过无法解析为数字的单位行/空格。
+    返回 {metric: [每 kernel 数值, ...]}，跳过无法解析为数字的单位行/空格。
+    额外返回 KERNEL_NAME_COL -> [每 kernel 名, ...]（字符串，用于 per_kernel 明细）；
+    每个 metric 的列表按 launch 顺序与 kernel 名一一对应。
     """
     rows = [r for r in csv.reader(io.StringIO(csv_text)) if r]
     if not rows:
         return {}
-    col = {m: rows[0].index(m) for m in wanted if m in rows[0]}
+    header = rows[0]
+    col = {m: header.index(m) for m in wanted if m in header}
     out = {m: [] for m in col}
+    name_idx = header.index(KERNEL_NAME_COL) if KERNEL_NAME_COL in header else None
+    names = []
     for row in rows[1:]:
+        # 数值单元无法解析为数字（单位行/空格）时记 0，保持各 metric 列表与
+        # kernel 行数严格对齐——per_kernel 按下标取值依赖这个对齐。
         for m, idx in col.items():
+            val = 0.0
             if idx < len(row):
                 cell = row[idx].replace(",", "").strip()
                 try:
-                    out[m].append(float(cell))
+                    val = float(cell)
                 except ValueError:
-                    pass
+                    val = 0.0
+            out[m].append(val)
+        if name_idx is not None and name_idx < len(row):
+            names.append(row[name_idx].strip())
+        else:
+            names.append("")
+    out[KERNEL_NAME_COL] = names
     return out
+
+
+def _build_per_kernel(agg, tensor_metric):
+    """由 _parse_ncu_csv 的逐 kernel 数组构建 per_kernel 明细列表。
+
+    agg[metric] 是按 launch 顺序排列、与 agg[KERNEL_NAME_COL] 一一对应的每 kernel
+    值。这里为每个 kernel 提取：名、F_cuda（加权 FP 指令）、F_tensor、B_mem、
+    三维利用率（%），以及 GPU duration 占比 dur_frac（供采集侧把端到端 T 按此拆分）。
+    单 kernel 算子会得到长度为 1 的列表。
+    """
+    names = agg.get(KERNEL_NAME_COL, [])
+    n = len(names)
+    if n == 0:
+        return []
+
+    def col(m):
+        vals = agg.get(m, [])
+        return [vals[i] if i < len(vals) else 0.0 for i in range(n)]
+
+    dur = col(DURATION)
+    dur_sum = sum(dur)
+    cuda_cols = {m: col(m) for m in FLOP_CUDA_CORE}
+    tensor_col = col(tensor_metric) if tensor_metric else [0.0] * n
+    mem_col = col(MEMORY_BYTES)
+    ucuda_col = col(UTIL["cuda_core"])
+    utensor_col = col(UTIL["tensor_core"])
+    umem_col = col(UTIL["memory_bw"])
+
+    per_kernel = []
+    for i in range(n):
+        f_cuda = sum(w * cuda_cols[m][i] for m, w in FLOP_CUDA_CORE.items())
+        per_kernel.append({
+            "name": names[i],
+            "F_cuda": f_cuda,
+            "F_tensor": tensor_col[i],
+            "B_mem": mem_col[i],
+            "U_cuda": ucuda_col[i],      # 已是 % of peak（0-100）
+            "U_tensor": utensor_col[i],
+            "U_mem": umem_col[i],
+            "dur_frac": (dur[i] / dur_sum) if dur_sum else 0.0,
+        })
+    return per_kernel
 
 
 def profile_with_ncu(op_name, profile_script, shape, dtype_str,
@@ -340,7 +414,8 @@ def profile_with_ncu(op_name, profile_script, shape, dtype_str,
     metric。
     """
     tensor_metric = FLOP_TENSOR_CORE.get(dtype_str)
-    metrics = list(FLOP_CUDA_CORE) + [MEMORY_BYTES, *UTIL.values(), SM_UTIL]
+    metrics = list(FLOP_CUDA_CORE) + [MEMORY_BYTES, *UTIL.values(), SM_UTIL,
+                                      DURATION]
     if tensor_metric:
         metrics.append(tensor_metric)
 
@@ -407,21 +482,49 @@ def profile_with_ncu(op_name, profile_script, shape, dtype_str,
 
         flops_cuda = sum(w * total(m) for m, w in FLOP_CUDA_CORE.items())
         flops_tensor = total(tensor_metric) if tensor_metric else 0.0
+        mem_bytes = total(MEMORY_BYTES)
+        # util：0-1 口径（旧字段沿用）；bottleneck 取三维最大者。
         util = {dim: mean_pct(name) for dim, name in UTIL.items()}
         bottleneck = max(util, key=util.get)
         if util[bottleneck] == 0.0:  # 三维全 0（解析失败/metric 不匹配）
             bottleneck = None
 
+        # 文档口径：U_* 用百分比（0-100），瓶颈单元名映射为 cuda/tensor/mem。
+        _unit = {"cuda_core": "cuda", "tensor_core": "tensor",
+                 "memory_bw": "mem"}
+        U_cuda = util["cuda_core"] * 100.0
+        U_tensor = util["tensor_core"] * 100.0
+        U_mem = util["memory_bw"] * 100.0
+        U_bottle = util[bottleneck] * 100.0 if bottleneck else 0.0
+
+        # per_kernel 明细：一次 native 调用可能启动多个 kernel（MoE 的
+        # gather/gemm/scatter 等）。汇总口径下 bottle_neck_unit 会被便宜的小
+        # kernel 带偏，故逐 kernel 保留 F/B/U，便于按耗时加权或逐 kernel 判瓶颈。
+        # T_us 由采集侧的 do_bench 端到端测得后按 GPU duration 比例拆到各 kernel。
+        per_kernel = _build_per_kernel(agg, tensor_metric)
+
         return {
+            # —— 文档口径字段（对齐 参考.md 符号列表）——
+            "F_cuda": flops_cuda,            # F_cuda  (FLOP)
+            "F_tensor": flops_tensor,        # F_tensor(FLOP)
+            "B_mem": mem_bytes,              # B_mem   (Byte)
+            "U_cuda": U_cuda,                # U_cuda  (%)
+            "U_tensor": U_tensor,            # U_tensor(%)
+            "U_mem": U_mem,                  # U_mem   (%)
+            "U_bottle_neck": U_bottle,       # U_bottle_neck (%)
+            "bottle_neck_unit": _unit.get(bottleneck),  # cuda/tensor/mem/None
+            "num_kernels": len(per_kernel),  # NVTX range 内 kernel 数
+            "per_kernel": per_kernel,        # 逐 kernel 明细（多 kernel 算子）
+            # —— 兼容旧字段（同值冗余）——
             "flops_cuda_core": flops_cuda,
             "flops_tensor_core": flops_tensor,
-            "memory_bytes": total(MEMORY_BYTES),
+            "memory_bytes": mem_bytes,
             "util_cuda_core": util["cuda_core"],
             "util_tensor_core": util["tensor_core"],
             "util_memory_bw": util["memory_bw"],
             "bottleneck": bottleneck,
             "bottleneck_util": util[bottleneck] if bottleneck else 0.0,
-            "cuda_flops": flops_cuda,        # 旧字段（兼容 base.py）
+            "cuda_flops": flops_cuda,
             "sm_utilization": mean_pct(SM_UTIL),
             "report_path": report_path,
         }
@@ -430,6 +533,29 @@ def profile_with_ncu(op_name, profile_script, shape, dtype_str,
             Path(script_path).unlink()
         except OSError:
             pass
+
+
+def _finalize_record(latency_ms, ncu, config=None):
+    """组装单条 shape×dtype 记录：填 T_us（文档口径 us），把端到端 T 按各
+    kernel 的 GPU duration 占比拆进 per_kernel[i]["T_us"]，可选附 config
+    （复杂算子的真实输入输出 shape 描述）。ncu 为 profile_with_ncu 的返回。"""
+    T_us = latency_ms * 1000.0
+
+    # 把端到端 T 按 dur_frac 拆到各 kernel（多 kernel 算子）；dur_frac 缺省则
+    # 均分。就地补上每 kernel 的 T_us，并移除中间量 dur_frac。
+    per_kernel = ncu.get("per_kernel", [])
+    n = len(per_kernel)
+    for k in per_kernel:
+        frac = k.pop("dur_frac", (1.0 / n) if n else 0.0)
+        k["T_us"] = T_us * frac
+
+    record = {}
+    if config is not None:
+        record["config"] = config
+    record["T_us"] = T_us
+    record["latency_ms"] = latency_ms
+    record.update(ncu)
+    return record
 
 
 def _collect_one_op(op_name, op_cfg, ncu_enabled, report_dir):
@@ -474,7 +600,7 @@ def _collect_one_op(op_name, op_cfg, ncu_enabled, report_dir):
                                        report_dir=report_dir)
             else:
                 ncu = _empty_result()
-            per_dtype[dtype_str] = {"latency_ms": latency_ms, **ncu}
+            per_dtype[dtype_str] = _finalize_record(latency_ms, ncu)
 
             bn = ncu["bottleneck"]
             suffix = (f"  瓶颈={bn} ({ncu['bottleneck_util']*100:.1f}%)"
@@ -553,7 +679,12 @@ def _collect_one_op_ops(op_module, ncu_enabled, report_dir):
                                        report_dir=report_dir)
             else:
                 ncu = _empty_result()
-            per_dtype[dtype_str] = {"latency_ms": latency_ms, **ncu}
+            # config：复杂算子可选导出 config(binding, dtype) 描述真实输入输出
+            # shape；未导出则不写该字段（简单算子 shape 键已够表达）。
+            cfg = None
+            if hasattr(op_module, "config"):
+                cfg = op_module.config(binding, dtype)
+            per_dtype[dtype_str] = _finalize_record(latency_ms, ncu, config=cfg)
 
             bn = ncu["bottleneck"]
             suffix = (f"  瓶颈={bn} ({ncu['bottleneck_util']*100:.1f}%)"
