@@ -56,6 +56,12 @@ SM_UTIL = "sm__throughput.avg.pct_of_peak_sustained_elapsed"
 DURATION = "gpu__time_duration.sum"
 # ncu raw csv 里的 kernel 名列。
 KERNEL_NAME_COL = "Kernel Name"
+# ncu 单位行里字节系列单位 → base 字节乘子。ncu 用十进制（1 Kbyte = 1000 byte，
+# 已由 H800 实测数据反推核对）。只对字节量归一；us/%/inst 等保持原值不换算
+# （T 另由 do_bench 测；util 本就是 %；duration 仅用作比例）。
+_BYTE_UNIT_MULT = {
+    "byte": 1.0, "Kbyte": 1e3, "Mbyte": 1e6, "Gbyte": 1e9, "Tbyte": 1e12,
+}
 
 # 采集哪些算子、每个算子的 native 调用坐标 / shape 网格 / 输入构造，全部由
 # 这份 yaml 驱动（方案B），逐步添加算子只改 yaml、不改本脚本。
@@ -337,25 +343,48 @@ def _parse_ncu_csv(csv_text, wanted):
         return {}
     header = rows[0]
     col = {m: header.index(m) for m in wanted if m in header}
-    out = {m: [] for m in col}
     name_idx = header.index(KERNEL_NAME_COL) if KERNEL_NAME_COL in header else None
+
+    # ncu raw CSV 在表头下紧跟一行“单位行”：各数值列写单位串（byte/Kbyte/us/
+    # %/inst…），Kernel Name 列为空。它不是真实 kernel——若当成 kernel，会在
+    # per_kernel 里造出空名全 0 记录，还会给 mean_pct 多算一个 0 行、稀释利用率。
+    # 这里显式识别并消费它：①得到每列单位→字节系列（Kbyte/Mbyte…，ncu 用十进制
+    # 1000 进制）归一到 base 字节，使 B_mem 单位为 Byte（对齐参考文档）；②数据行
+    # 从单位行之后开始。无单位行的 ncu 版本则乘子全 1、数据从第 1 行起。
+    mult = {m: 1.0 for m in col}
+    data_start = 1
+    if len(rows) > 1 and name_idx is not None:
+        unit_row = rows[1]
+        unit_name = (unit_row[name_idx].strip()
+                     if name_idx < len(unit_row) else "")
+        if not unit_name:  # 确是单位行（Kernel Name 空）
+            for m, idx in col.items():
+                unit = unit_row[idx].strip() if idx < len(unit_row) else ""
+                mult[m] = _BYTE_UNIT_MULT.get(unit, 1.0)
+            data_start = 2
+
+    out = {m: [] for m in col}
     names = []
-    for row in rows[1:]:
-        # 数值单元无法解析为数字（单位行/空格）时记 0，保持各 metric 列表与
-        # kernel 行数严格对齐——per_kernel 按下标取值依赖这个对齐。
+    for row in rows[data_start:]:
+        # 防御：跳过任何 Kernel Name 为空的非 kernel 行。
+        if name_idx is not None:
+            name = row[name_idx].strip() if name_idx < len(row) else ""
+            if not name:
+                continue
+        else:
+            name = ""
+        # 数值单元无法解析为数字（空格等）时记 0，保持各 metric 列表与 kernel
+        # 行数严格对齐——per_kernel 按下标取值依赖这个对齐。按单位乘子归一。
         for m, idx in col.items():
             val = 0.0
             if idx < len(row):
                 cell = row[idx].replace(",", "").strip()
                 try:
-                    val = float(cell)
+                    val = float(cell) * mult[m]
                 except ValueError:
                     val = 0.0
             out[m].append(val)
-        if name_idx is not None and name_idx < len(row):
-            names.append(row[name_idx].strip())
-        else:
-            names.append("")
+        names.append(name)
     out[KERNEL_NAME_COL] = names
     return out
 
