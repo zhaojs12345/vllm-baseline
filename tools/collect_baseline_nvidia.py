@@ -21,7 +21,6 @@ from pathlib import Path
 
 import torch
 import triton
-import yaml
 
 # ---- NCU metric 名（H800/Hopper 已核对，换架构前用 `ncu --query-metrics` 复核）----
 
@@ -64,14 +63,14 @@ _BYTE_UNIT_MULT = {
     "byte": 1.0, "Kbyte": 1e3, "Mbyte": 1e6, "Gbyte": 1e9, "Tbyte": 1e12,
 }
 
-# 采集哪些算子、每个算子的 native 调用坐标 / shape 网格 / 输入构造，全部由
-# 这份 yaml 驱动（方案B），逐步添加算子只改 yaml、不改本脚本。
+# yaml 声明式路径（算子的 native 调用坐标 / shape 网格 / 输入构造）当前未接入采集，
+# 保留 baseline_shape.yaml 及 _collect_one_op 引擎待后续与别的模块对接时再启用。
+# CONFIG_PATH 指向那份保留文件；届时重新在 collect_baseline 里加载即可。
 CONFIG_PATH = Path(__file__).with_name("baseline_shape.yaml")
 
 # 方案B（自定义 ops）：每个算子一个 Python 模块，自带 native()/grid()/
-# build_inputs()/key_shape()（契约见 ops/__init__.py）。采集器优先扫描此目录，
-# 复杂算子（元组入参、前置 metadata、量化预处理、约束张量等）用 Python 表达，
-# yaml 声明式路径保留给纯位置参数的简单算子直到全部迁完。
+# build_inputs()/key_shape()（契约见 ops/__init__.py）。采集全部走此目录，
+# 复杂算子（元组入参、前置 metadata、量化预处理、约束张量等）用 Python 表达。
 OPS_DIR = Path(__file__).resolve().parent.parent / "ops"
 
 def resolve_native_op(module, symbol):
@@ -762,12 +761,12 @@ def _collect_one_op_ops(op_module, ncu_enabled, report_dir,
     return entry
 
 
-def collect_baseline(output_path, config_path=CONFIG_PATH, ncu_enabled=True,
+def collect_baseline(output_path, ncu_enabled=True,
                      report_dir=None, device=None):
     """采集 baseline 数据并写入 JSON。
 
-    先跑方案B（ops/ 下的自定义算子模块），再跑 yaml 声明式路径（跳过已被 ops
-    覆盖的同名算子，ops 优先）。
+    采集全部走方案B（ops/ 下的自定义算子模块）。yaml 声明式路径（baseline_shape.yaml
+    + _collect_one_op 引擎）暂不接入，保留待后续与别的模块对接时再启用。
 
     device：指定跑在哪张卡上（物理卡号，如 "0"/"3"）。通过 CUDA_VISIBLE_DEVICES
     实现——必须在首次 CUDA 调用前设置，torch 才会读到；主进程所有 device="cuda"
@@ -786,22 +785,12 @@ def collect_baseline(output_path, config_path=CONFIG_PATH, ncu_enabled=True,
     results = {}
     output_path = Path(output_path)
 
-    # 方案B：ops/ 下的自定义算子模块优先。传入 results/output_path，采集器每采完
+    # 方案B：ops/ 下的自定义算子模块。传入 results/output_path，采集器每采完
     # 一个 shape 就增量落盘，中断也能保住已完成的部分。
     ops_modules = _discover_ops()
     for op_name, op_module in ops_modules:
         _collect_one_op_ops(op_module, ncu_enabled, report_dir,
                             results=results, output_path=output_path)
-
-    # yaml 声明式路径：跳过已被 ops 覆盖的同名算子（ops 优先）。
-    covered = set(results)
-    config = yaml.safe_load(Path(config_path).read_text()) or {}
-    for op_name, op_cfg in config.items():
-        if op_name in covered:
-            print(f"\n跳过 yaml 算子 {op_name}: 已由 ops/ 模块采集")
-            continue
-        _collect_one_op(op_name, op_cfg, ncu_enabled, report_dir,
-                        results=results, output_path=output_path)
 
     # 收尾再原子落盘一次（正常路径下与最后一次增量落盘内容一致；兜底空结果时也
     # 能写出 {}）。
@@ -814,8 +803,6 @@ if __name__ == "__main__":
         description="采集 NVIDIA 原生 kernel 的 baseline 数据")
     parser.add_argument("--output", default="op_perf_baseline.json",
                         help="输出文件路径")
-    parser.add_argument("--config", default=str(CONFIG_PATH),
-                        help="算子采集配置 yaml（默认同目录 baseline_shape.yaml）")
     parser.add_argument("--no-ncu", action="store_true",
                         help="跳过 NCU profiling（只测 latency）")
     parser.add_argument("--report-dir", default="ncu_reports",
@@ -825,6 +812,6 @@ if __name__ == "__main__":
                              "CUDA_VISIBLE_DEVICES 生效，主进程与 NCU 子进程一致；"
                              "缺省用默认设备")
     args = parser.parse_args()
-    collect_baseline(args.output, config_path=args.config,
+    collect_baseline(args.output,
                      ncu_enabled=not args.no_ncu, report_dir=args.report_dir,
                      device=args.device)
