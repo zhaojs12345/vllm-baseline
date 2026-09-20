@@ -13,6 +13,7 @@ import importlib
 import io
 import itertools
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -587,8 +588,28 @@ def _finalize_record(latency_ms, ncu, config=None):
     return record
 
 
-def _collect_one_op(op_name, op_cfg, ncu_enabled, report_dir):
-    """按 yaml 配置采集单个算子；native 解析不到则返回 None（跳过）。"""
+def _flush_results(results, output_path):
+    """把当前 results 原子落盘：先写同目录临时文件再 os.replace 覆盖目标。
+
+    每采完一个 shape 就调一次，中断/崩溃也能保住已完成的部分。原子替换避免
+    写到一半崩溃留下半截 JSON——目标文件要么是上一次的完整内容、要么是这次的
+    完整内容。output_path 为 None 时不落盘（供不需要增量落盘的调用跳过）。
+    """
+    if output_path is None:
+        return
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = output_path.with_suffix(output_path.suffix + ".tmp")
+    tmp.write_text(json.dumps(results, indent=2))
+    os.replace(tmp, output_path)
+
+
+def _collect_one_op(op_name, op_cfg, ncu_enabled, report_dir,
+                    results=None, output_path=None):
+    """按 yaml 配置采集单个算子；native 解析不到则返回 None（跳过）。
+
+    results/output_path 均给出时，每采完一个 shape 就把 results（含本算子已完成
+    的 shape）原子落盘一次，实现增量续写。"""
     module = op_cfg["native"]["module"]
     symbol = op_cfg["native"]["symbol"]
     op = resolve_native_op(module, symbol)
@@ -613,6 +634,10 @@ def _collect_one_op(op_name, op_cfg, ncu_enabled, report_dir):
         return None
 
     shapes = {}
+    entry = {"native_api": f"{module}.{symbol}", "shapes": shapes}
+    # 先把本算子的 entry 挂进共享 results，好让每 shape 落盘时带上它。
+    if results is not None:
+        results[op_name] = entry
     print(f"\n采集算子: {op_name}  (native {module}.{symbol})")
     for binding in bindings:
         shape = _key_shape(op_cfg, binding)
@@ -636,7 +661,10 @@ def _collect_one_op(op_name, op_cfg, ncu_enabled, report_dir):
                       if bn else "")
             print(f"  {shape} {dtype_str}: {latency_ms:.4f} ms{suffix}")
 
-    return {"native_api": f"{module}.{symbol}", "shapes": shapes}
+        # 一个 shape（含全部 dtype）采完即增量落盘。
+        _flush_results(results, output_path)
+
+    return entry
 
 
 def _discover_ops(ops_dir=OPS_DIR):
@@ -668,8 +696,12 @@ def _discover_ops(ops_dir=OPS_DIR):
     return discovered
 
 
-def _collect_one_op_ops(op_module, ncu_enabled, report_dir):
-    """采集单个方案B（自定义 ops）算子；native 解析不到则返回 None（跳过）。"""
+def _collect_one_op_ops(op_module, ncu_enabled, report_dir,
+                        results=None, output_path=None):
+    """采集单个方案B（自定义 ops）算子；native 解析不到则返回 None（跳过）。
+
+    results/output_path 均给出时，每采完一个 shape 就把 results（含本算子已完成
+    的 shape）原子落盘一次，实现增量续写。"""
     op_name = op_module.OP_NAME
     mod_name = op_module.__name__
     op = op_module.native()
@@ -692,6 +724,10 @@ def _collect_one_op_ops(op_module, ncu_enabled, report_dir):
         return None
 
     shapes = {}
+    entry = {"native_api": f"ops.{mod_name}", "shapes": shapes}
+    # 先把本算子的 entry 挂进共享 results，好让每 shape 落盘时带上它。
+    if results is not None:
+        results[op_name] = entry
     print(f"\n采集算子: {op_name}  (ops 模块 {mod_name})")
     for binding in bindings:
         shape = op_module.key_shape(binding)
@@ -720,16 +756,26 @@ def _collect_one_op_ops(op_module, ncu_enabled, report_dir):
                       if bn else "")
             print(f"  {shape} {dtype_str}: {latency_ms:.4f} ms{suffix}")
 
-    return {"native_api": f"ops.{mod_name}", "shapes": shapes}
+        # 一个 shape（含全部 dtype）采完即增量落盘。
+        _flush_results(results, output_path)
+
+    return entry
 
 
 def collect_baseline(output_path, config_path=CONFIG_PATH, ncu_enabled=True,
-                     report_dir=None):
+                     report_dir=None, device=None):
     """采集 baseline 数据并写入 JSON。
 
     先跑方案B（ops/ 下的自定义算子模块），再跑 yaml 声明式路径（跳过已被 ops
     覆盖的同名算子，ops 优先）。
+
+    device：指定跑在哪张卡上（物理卡号，如 "0"/"3"）。通过 CUDA_VISIBLE_DEVICES
+    实现——必须在首次 CUDA 调用前设置，torch 才会读到；主进程所有 device="cuda"
+    与 NCU 子进程（继承本进程环境变量）由此一致落到该卡。None 则用默认设备。
     """
+    if device is not None:
+        # 早于下面第一处 torch.cuda 调用设置，否则 torch 已初始化 CUDA、不再读该变量。
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(device)
     if not torch.cuda.is_available():
         raise RuntimeError("需要 CUDA 设备")
     device_name = torch.cuda.get_device_name()
@@ -738,13 +784,14 @@ def collect_baseline(output_path, config_path=CONFIG_PATH, ncu_enabled=True,
     print(f"采集设备: {device_name}")
 
     results = {}
+    output_path = Path(output_path)
 
-    # 方案B：ops/ 下的自定义算子模块优先。
+    # 方案B：ops/ 下的自定义算子模块优先。传入 results/output_path，采集器每采完
+    # 一个 shape 就增量落盘，中断也能保住已完成的部分。
     ops_modules = _discover_ops()
     for op_name, op_module in ops_modules:
-        entry = _collect_one_op_ops(op_module, ncu_enabled, report_dir)
-        if entry is not None:
-            results[op_name] = entry
+        _collect_one_op_ops(op_module, ncu_enabled, report_dir,
+                            results=results, output_path=output_path)
 
     # yaml 声明式路径：跳过已被 ops 覆盖的同名算子（ops 优先）。
     covered = set(results)
@@ -753,13 +800,12 @@ def collect_baseline(output_path, config_path=CONFIG_PATH, ncu_enabled=True,
         if op_name in covered:
             print(f"\n跳过 yaml 算子 {op_name}: 已由 ops/ 模块采集")
             continue
-        entry = _collect_one_op(op_name, op_cfg, ncu_enabled, report_dir)
-        if entry is not None:
-            results[op_name] = entry
+        _collect_one_op(op_name, op_cfg, ncu_enabled, report_dir,
+                        results=results, output_path=output_path)
 
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(results, indent=2))
+    # 收尾再原子落盘一次（正常路径下与最后一次增量落盘内容一致；兜底空结果时也
+    # 能写出 {}）。
+    _flush_results(results, output_path)
     print(f"\n✓ Baseline 数据已写入: {output_path}  (共 {len(results)} 个算子)")
 
 
@@ -774,6 +820,11 @@ if __name__ == "__main__":
                         help="跳过 NCU profiling（只测 latency）")
     parser.add_argument("--report-dir", default="ncu_reports",
                         help="NCU .ncu-rep 报告存放目录（可用 ncu-ui 打开）")
+    parser.add_argument("--device", default=None,
+                        help="指定跑在哪张卡上（物理卡号，如 0 或 3）。经 "
+                             "CUDA_VISIBLE_DEVICES 生效，主进程与 NCU 子进程一致；"
+                             "缺省用默认设备")
     args = parser.parse_args()
     collect_baseline(args.output, config_path=args.config,
-                     ncu_enabled=not args.no_ncu, report_dir=args.report_dir)
+                     ncu_enabled=not args.no_ncu, report_dir=args.report_dir,
+                     device=args.device)
