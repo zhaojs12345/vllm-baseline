@@ -695,6 +695,59 @@ def _discover_ops(ops_dir=OPS_DIR):
     return discovered
 
 
+def _parse_name_list(value):
+    """把 --ops/--whitelist/--blacklist 的取值解析成算子名集合。
+
+    取值可以是：
+      - 逗号分隔的算子名，如 "moe_sum,grouped_topk"；
+      - 一个文件路径（每行一个算子名，# 起头的行与空行忽略）。
+    返回去重后的名字集合；value 为 None/空 时返回 None（表示“未指定”）。
+    """
+    if value is None:
+        return None
+    value = value.strip()
+    if not value:
+        return None
+    p = Path(value)
+    if p.is_file():
+        names = []
+        for line in p.read_text().splitlines():
+            line = line.split("#", 1)[0].strip()
+            if line:
+                names.append(line)
+    else:
+        names = [x.strip() for x in value.split(",") if x.strip()]
+    return set(names)
+
+
+def _select_ops(discovered, only=None, whitelist=None, blacklist=None):
+    """按名单过滤 _discover_ops() 的结果，返回过滤后的 [(name, module)]。
+
+    优先级：先按 only 与 whitelist 求交集（两者都给则同时生效，取交集；
+    任一为 None 表示该维度不设限），再从结果里减去 blacklist。
+    对名单里写了但 discovered 中不存在的算子名给出告警（不报错）。
+    """
+    available = {name for name, _ in discovered}
+    for label, names in (("--ops", only), ("--whitelist", whitelist),
+                         ("--blacklist", blacklist)):
+        if names:
+            unknown = sorted(names - available)
+            if unknown:
+                print(f"警告: {label} 中以下算子在 ops/ 未找到，已忽略: "
+                      f"{', '.join(unknown)}")
+
+    selected = []
+    for name, mod in discovered:
+        if only is not None and name not in only:
+            continue
+        if whitelist is not None and name not in whitelist:
+            continue
+        if blacklist is not None and name in blacklist:
+            continue
+        selected.append((name, mod))
+    return selected
+
+
 def _collect_one_op_ops(op_module, ncu_enabled, report_dir,
                         results=None, output_path=None):
     """采集单个方案B（自定义 ops）算子；native 解析不到则返回 None（跳过）。
@@ -762,7 +815,8 @@ def _collect_one_op_ops(op_module, ncu_enabled, report_dir,
 
 
 def collect_baseline(output_path, ncu_enabled=True,
-                     report_dir=None, device=None):
+                     report_dir=None, device=None,
+                     only=None, whitelist=None, blacklist=None):
     """采集 baseline 数据并写入 JSON。
 
     采集全部走方案B（ops/ 下的自定义算子模块）。yaml 声明式路径（baseline_shape.yaml
@@ -771,6 +825,9 @@ def collect_baseline(output_path, ncu_enabled=True,
     device：指定跑在哪张卡上（物理卡号，如 "0"/"3"）。通过 CUDA_VISIBLE_DEVICES
     实现——必须在首次 CUDA 调用前设置，torch 才会读到；主进程所有 device="cuda"
     与 NCU 子进程（继承本进程环境变量）由此一致落到该卡。None 则用默认设备。
+
+    only/whitelist/blacklist：算子名集合（None 表示不设限）。见 _select_ops：
+    only 与 whitelist 取交集后再减去 blacklist。
     """
     if device is not None:
         # 早于下面第一处 torch.cuda 调用设置，否则 torch 已初始化 CUDA、不再读该变量。
@@ -788,6 +845,13 @@ def collect_baseline(output_path, ncu_enabled=True,
     # 方案B：ops/ 下的自定义算子模块。传入 results/output_path，采集器每采完
     # 一个 shape 就增量落盘，中断也能保住已完成的部分。
     ops_modules = _discover_ops()
+    ops_modules = _select_ops(ops_modules, only=only,
+                              whitelist=whitelist, blacklist=blacklist)
+    if not ops_modules:
+        print("警告: 名单过滤后没有可采集的算子")
+    else:
+        print(f"待采集算子（{len(ops_modules)}）: "
+              f"{', '.join(name for name, _ in ops_modules)}")
     for op_name, op_module in ops_modules:
         _collect_one_op_ops(op_module, ncu_enabled, report_dir,
                             results=results, output_path=output_path)
@@ -811,7 +875,19 @@ if __name__ == "__main__":
                         help="指定跑在哪张卡上（物理卡号，如 0 或 3）。经 "
                              "CUDA_VISIBLE_DEVICES 生效，主进程与 NCU 子进程一致；"
                              "缺省用默认设备")
+    parser.add_argument("--ops", default=None,
+                        help="只跑指定算子（逗号分隔，如 moe_sum,grouped_topk），"
+                             "或指向一个每行一个算子名的文件；缺省跑全部")
+    parser.add_argument("--whitelist", default=None,
+                        help="白名单：只跑名单内算子（逗号分隔或文件路径）。"
+                             "与 --ops 同时给出时取交集")
+    parser.add_argument("--blacklist", default=None,
+                        help="黑名单：跳过名单内算子（逗号分隔或文件路径）。"
+                             "在 --ops/--whitelist 之后生效")
     args = parser.parse_args()
     collect_baseline(args.output,
                      ncu_enabled=not args.no_ncu, report_dir=args.report_dir,
-                     device=args.device)
+                     device=args.device,
+                     only=_parse_name_list(args.ops),
+                     whitelist=_parse_name_list(args.whitelist),
+                     blacklist=_parse_name_list(args.blacklist))

@@ -24,9 +24,19 @@ python tools/collect_baseline_nvidia.py --no-ncu
 
 # 指定 ncu 报告目录（.ncu-rep 可用 ncu-ui 打开）
 python tools/collect_baseline_nvidia.py --report-dir ncu_reports
+
+# 只跑指定的一到多个算子（逗号分隔）
+python tools/collect_baseline_nvidia.py --ops moe_sum,add_rms_norm
+
+# 白名单：只跑名单内的算子；黑名单：跳过名单内的算子
+# 名单可以是逗号分隔字符串，也可以是文件路径（每行一个算子名，# 开头为注释）
+python tools/collect_baseline_nvidia.py --whitelist ops_whitelist.txt
+python tools/collect_baseline_nvidia.py --blacklist flash_mla,megamoe
 ```
 
 依赖：CUDA GPU、`vllm`、`triton`、`ncu`(Nsight Compute)。采集器优先扫描 `ops/`，其余算子回落到 `baseline_shape.yaml`；两者同名时以 `ops/` 为准。
+
+`--ops` / `--whitelist` / `--blacklist` 可组合使用：算子被保留需同时满足「在 `--ops` 内（若指定）」「在白名单内（若指定）」「不在黑名单内」。名单中的未知算子名会打印告警但不报错。
 
 ## 新增算子
 
