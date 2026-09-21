@@ -100,15 +100,20 @@ def build_inputs(binding, dtype, device):
     )
 
     kwargs = {"activation": "silu", "conv_state_indices": cache_indices}
-    # pad_slot_id 在旧签名存在；新签名用 null_block_id。按能力探测决定是否传。
+    # cache_indices 尾部用 _PAD_SLOT_ID(-1) 作占位槽，必须把这个占位值告诉
+    # kernel，否则它会拿 -1 去索引 conv_states → 负索引 → 非法显存访问。
+    # 旧签名用 pad_slot_id，新版 vLLM 用 null_block_id（默认 0，与 -1 不符），
+    # 按能力探测传对应形参；两者都无则说明该实现不支持占位，退回全合法索引。
     op = native()
     if op is not None:
         try:
             params = inspect.signature(op).parameters
-            if "pad_slot_id" in params:
-                kwargs["pad_slot_id"] = _PAD_SLOT_ID
         except (TypeError, ValueError):
-            pass
+            params = {}
+        if "pad_slot_id" in params:
+            kwargs["pad_slot_id"] = _PAD_SLOT_ID
+        elif "null_block_id" in params:
+            kwargs["null_block_id"] = _PAD_SLOT_ID
     return (x, conv_states, weight, bias), kwargs
 
 

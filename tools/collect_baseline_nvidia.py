@@ -814,13 +814,60 @@ def _collect_one_op_ops(op_module, ncu_enabled, report_dir,
     return entry
 
 
+def _spawn_op_worker(op_name, ncu_enabled, report_dir, device, op_timeout):
+    """在独立子进程里采集单个算子，返回 (entry_or_None, ok)。
+
+    子进程崩溃（如 CUDA 非法访存污染 context）只会杀死它自己，不波及主进程与其余
+    算子。子进程用 --_worker --ops <name> 只跑这一个算子，并把 {op_name: entry}
+    增量落盘到自己的临时文件；即便它中途崩了，已完成 shape 也已写在该文件里，主进程
+    读回即可。ok 表示子进程是否正常退出（returncode==0 且未超时）。"""
+    fd, tmp = tempfile.mkstemp(prefix=f"baseline_{op_name}_", suffix=".json")
+    os.close(fd)
+    cmd = [sys.executable, __file__, "--_worker", "--ops", op_name,
+           "--output", tmp, "--report-dir", str(report_dir)]
+    if not ncu_enabled:
+        cmd.append("--no-ncu")
+    if device is not None:
+        cmd += ["--device", str(device)]
+
+    ok = True
+    try:
+        proc = subprocess.run(cmd, timeout=op_timeout)
+        ok = proc.returncode == 0
+        if not ok:
+            print(f"  ✗ 算子 {op_name} 子进程异常退出 (code={proc.returncode})，"
+                  f"跳过；已完成的 shape 若有则保留")
+    except subprocess.TimeoutExpired:
+        ok = False
+        print(f"  ✗ 算子 {op_name} 子进程超时 (> {op_timeout}s)，跳过")
+
+    # 无论成败，都尝试读回子进程已落盘的（可能是部分）结果。
+    entry = None
+    try:
+        partial = json.loads(Path(tmp).read_text())
+        entry = partial.get(op_name)
+    except (OSError, ValueError):
+        entry = None
+    finally:
+        try:
+            Path(tmp).unlink()
+        except OSError:
+            pass
+    return entry, ok
+
+
 def collect_baseline(output_path, ncu_enabled=True,
                      report_dir=None, device=None,
-                     only=None, whitelist=None, blacklist=None):
+                     only=None, whitelist=None, blacklist=None,
+                     worker=False, op_timeout=1800):
     """采集 baseline 数据并写入 JSON。
 
     采集全部走方案B（ops/ 下的自定义算子模块）。yaml 声明式路径（baseline_shape.yaml
     + _collect_one_op 引擎）暂不接入，保留待后续与别的模块对接时再启用。
+
+    进程隔离：默认（worker=False，编排模式）为每个算子 spawn 一个独立子进程采集，
+    单算子的 CUDA 崩溃/挂起不会毒死整轮——主进程只编排、从不跑 kernel。worker=True
+    则在本进程内直接采集选中的算子（由编排模式 spawn 的子进程走这条路，避免递归）。
 
     device：指定跑在哪张卡上（物理卡号，如 "0"/"3"）。通过 CUDA_VISIBLE_DEVICES
     实现——必须在首次 CUDA 调用前设置，torch 才会读到；主进程所有 device="cuda"
@@ -828,6 +875,7 @@ def collect_baseline(output_path, ncu_enabled=True,
 
     only/whitelist/blacklist：算子名集合（None 表示不设限）。见 _select_ops：
     only 与 whitelist 取交集后再减去 blacklist。
+    op_timeout：编排模式下每个算子子进程的超时秒数（防 CUDA 挂起卡死整轮）。
     """
     if device is not None:
         # 早于下面第一处 torch.cuda 调用设置，否则 torch 已初始化 CUDA、不再读该变量。
@@ -837,29 +885,44 @@ def collect_baseline(output_path, ncu_enabled=True,
     device_name = torch.cuda.get_device_name()
     if "NVIDIA" not in device_name.upper():
         print(f"警告: 当前设备 {device_name} 可能不是 NVIDIA 硬件")
-    print(f"采集设备: {device_name}")
 
     results = {}
     output_path = Path(output_path)
 
-    # 方案B：ops/ 下的自定义算子模块。传入 results/output_path，采集器每采完
-    # 一个 shape 就增量落盘，中断也能保住已完成的部分。
     ops_modules = _discover_ops()
     ops_modules = _select_ops(ops_modules, only=only,
                               whitelist=whitelist, blacklist=blacklist)
+
+    if worker:
+        # 子进程/直采路径：在本进程内直接采集，每采完一个 shape 增量落盘。
+        for op_name, op_module in ops_modules:
+            _collect_one_op_ops(op_module, ncu_enabled, report_dir,
+                                results=results, output_path=output_path)
+        _flush_results(results, output_path)
+        return
+
+    # 编排路径：每个算子一个隔离子进程。
+    print(f"采集设备: {device_name}")
     if not ops_modules:
         print("警告: 名单过滤后没有可采集的算子")
     else:
         print(f"待采集算子（{len(ops_modules)}）: "
               f"{', '.join(name for name, _ in ops_modules)}")
-    for op_name, op_module in ops_modules:
-        _collect_one_op_ops(op_module, ncu_enabled, report_dir,
-                            results=results, output_path=output_path)
+    failed = []
+    for op_name, _ in ops_modules:
+        entry, ok = _spawn_op_worker(op_name, ncu_enabled, report_dir,
+                                     device, op_timeout)
+        if entry is not None:
+            results[op_name] = entry
+        if not ok:
+            failed.append(op_name)
+        # 每个算子结束即合并落盘，中断也保住已完成的算子。
+        _flush_results(results, output_path)
 
-    # 收尾再原子落盘一次（正常路径下与最后一次增量落盘内容一致；兜底空结果时也
-    # 能写出 {}）。
-    _flush_results(results, output_path)
     print(f"\n✓ Baseline 数据已写入: {output_path}  (共 {len(results)} 个算子)")
+    if failed:
+        print(f"⚠ {len(failed)} 个算子子进程异常（已跳过，部分结果若有则保留）: "
+              f"{', '.join(failed)}")
 
 
 if __name__ == "__main__":
@@ -884,10 +947,18 @@ if __name__ == "__main__":
     parser.add_argument("--blacklist", default=None,
                         help="黑名单：跳过名单内算子（逗号分隔或文件路径）。"
                              "在 --ops/--whitelist 之后生效")
+    parser.add_argument("--op-timeout", type=float, default=1800,
+                        help="编排模式下每个算子子进程的超时秒数（防 CUDA 挂起，"
+                             "缺省 1800）")
+    parser.add_argument("--_worker", action="store_true",
+                        help="内部使用：子进程直采模式，在本进程内采集选中算子、"
+                             "不再 spawn（由编排模式自动传入，勿手动使用）")
     args = parser.parse_args()
     collect_baseline(args.output,
                      ncu_enabled=not args.no_ncu, report_dir=args.report_dir,
                      device=args.device,
                      only=_parse_name_list(args.ops),
                      whitelist=_parse_name_list(args.whitelist),
-                     blacklist=_parse_name_list(args.blacklist))
+                     blacklist=_parse_name_list(args.blacklist),
+                     worker=getattr(args, "_worker"),
+                     op_timeout=args.op_timeout)
