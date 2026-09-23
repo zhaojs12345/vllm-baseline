@@ -651,8 +651,7 @@ def build_scaling_factors(specs_path=HARDWARE_SPECS_PATH,
 
     entries = []
     for c in chips:
-        if c.get("chip") == reference_chip:
-            continue  # 参考芯片对自己恒为 1，不列
+        # 参考芯片自己也列出：自己除自己得 1.0，缺失项仍为 null，便于下游展示。
         entries.append({
             "vendor": _VENDOR_ZH_TO_EN.get(c.get("vendor"), c.get("vendor")),
             "vendor_zh": c.get("vendor"),
