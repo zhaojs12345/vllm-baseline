@@ -73,6 +73,21 @@ CONFIG_PATH = Path(__file__).with_name("baseline_shape.yaml")
 # 复杂算子（元组入参、前置 metadata、量化预处理、约束张量等）用 Python 表达。
 OPS_DIR = Path(__file__).resolve().parent.parent / "ops"
 
+# 各厂商芯片规格（由 extract_hardware_xlsx.py 从《厂商带宽和算力汇总.xlsx》转出，
+# 见 hardware_specs.json）。用于把「本机采集芯片（H800）」的峰值当分母，算出其余
+# 芯片相对它的折算系数写进输出 JSON，供 flaggems-vllm 侧跨芯片归一化对比。
+HARDWARE_SPECS_PATH = Path(__file__).with_name("hardware_specs.json")
+# 基准芯片：baseline 数据就是在这颗卡上采的，折算系数的分母。
+DEFAULT_REFERENCE_CHIP = "H800"
+# 表格中文厂商名 -> 运行时 vendor_name（小写英文，与 flaggems_vllm.vendor_name 对齐）。
+_VENDOR_ZH_TO_EN = {
+    "英伟达": "nvidia", "平头哥": "t-head", "燧原": "enflame", "华为": "ascend",
+    "沐曦": "metax", "昆仑芯": "kunlunxin", "摩尔": "mthreads", "海光": "hygon",
+    "天数": "iluvatar", "清微智能": "tsingmicro", "寒武纪": "cambricon",
+}
+_TENSOR_DTYPES = ("bf16", "fp16", "fp32", "tf32", "int8", "fp64", "fp8")
+_VECTOR_DTYPES = ("bf16", "fp16", "fp32", "int8", "fp64", "fp8")
+
 def resolve_native_op(module, symbol):
     """解析一个 NV 原生 callable；解析不到返回 None（该算子无基准，跳过）。
 
@@ -587,6 +602,74 @@ def _finalize_record(latency_ms, ncu, config=None):
     return record
 
 
+def _ratio(num, den):
+    """折算系数一项：分子或分母缺失（None）或分母为 0 时记 None。"""
+    if num is None or den is None or den == 0:
+        return None
+    return round(num / den, 6)
+
+
+def _factors_for_block(block, ref_block):
+    """算一套（nominal 或 measured）折算系数：带宽 + Tensor/Vector 各 dtype。"""
+    if not block or not ref_block:
+        return None
+    out = {
+        "bandwidth_gbps": _ratio(block.get("bandwidth_gbps"),
+                                 ref_block.get("bandwidth_gbps")),
+        "tensor": {}, "vector": {},
+    }
+    for dt in _TENSOR_DTYPES:
+        out["tensor"][dt] = _ratio(block.get("tensor", {}).get(dt),
+                                   ref_block.get("tensor", {}).get(dt))
+    for dt in _VECTOR_DTYPES:
+        out["vector"][dt] = _ratio(block.get("vector", {}).get(dt),
+                                   ref_block.get("vector", {}).get(dt))
+    return out
+
+
+def build_scaling_factors(specs_path=HARDWARE_SPECS_PATH,
+                          reference_chip=DEFAULT_REFERENCE_CHIP):
+    """由 hardware_specs.json 算各厂商芯片相对基准芯片的折算系数。
+
+    折算系数 factor[resource] = vendor_peak / reference_peak（默认参考 H800，即
+    baseline 采集芯片）。nominal / measured 各一套，覆盖显存带宽与 Tensor/Vector
+    各 dtype 算力；分子或分母缺失（保密/不具备/未测）记 null。flaggems-vllm 侧跨芯片
+    对比时用 factor 除掉硬件峰值差距，得到相对硬件应得性能的达成率。
+
+    规格文件缺失或参考芯片不在表内时返回带 error 说明的占位 dict，不中断采集。
+    """
+    specs_path = Path(specs_path)
+    if not specs_path.exists():
+        return {"_error": f"未找到规格文件 {specs_path}，折算系数留空",
+                "reference_chip": reference_chip, "chips": []}
+    specs = json.loads(specs_path.read_text(encoding="utf-8"))
+    chips = specs.get("chips", [])
+    ref = next((c for c in chips if c.get("chip") == reference_chip), None)
+    if ref is None:
+        return {"_error": f"规格文件中无参考芯片 {reference_chip}，折算系数留空",
+                "reference_chip": reference_chip, "chips": []}
+
+    entries = []
+    for c in chips:
+        if c.get("chip") == reference_chip:
+            continue  # 参考芯片对自己恒为 1，不列
+        entries.append({
+            "vendor": _VENDOR_ZH_TO_EN.get(c.get("vendor"), c.get("vendor")),
+            "vendor_zh": c.get("vendor"),
+            "chip": c.get("chip"),
+            "nominal": _factors_for_block(c.get("nominal"), ref.get("nominal")),
+            "measured": _factors_for_block(c.get("measured"), ref.get("measured")),
+        })
+    return {
+        "_note": (f"factor = vendor_peak / {reference_chip}_peak；"
+                  "null 表示分子或分母缺失；nominal/measured 各一套。"
+                  "供 flaggems-vllm 跨芯片归一化对比使用。"),
+        "reference_chip": reference_chip,
+        "source_specs": specs_path.name,
+        "chips": entries,
+    }
+
+
 def _flush_results(results, output_path):
     """把当前 results 原子落盘：先写同目录临时文件再 os.replace 覆盖目标。
 
@@ -876,6 +959,11 @@ def collect_baseline(output_path, ncu_enabled=True,
     only/whitelist/blacklist：算子名集合（None 表示不设限）。见 _select_ops：
     only 与 whitelist 取交集后再减去 blacklist。
     op_timeout：编排模式下每个算子子进程的超时秒数（防 CUDA 挂起卡死整轮）。
+
+    折算系数每次必写：编排（主）进程把各厂商芯片相对 DEFAULT_REFERENCE_CHIP（H800，
+    本机采集芯片）的折算系数写进输出 JSON 顶层 `_scaling_factors` 键（下划线前缀不与
+    算子名冲突，flaggems-vllm 按算子名查表时天然忽略），与 NCU 数据放在同一份文件里。
+    worker 子进程只采单个算子、结果由主进程按算子名读回，故不重复写折算系数。
     """
     if device is not None:
         # 早于下面第一处 torch.cuda 调用设置，否则 torch 已初始化 CUDA、不再读该变量。
@@ -903,6 +991,15 @@ def collect_baseline(output_path, ncu_enabled=True,
 
     # 编排路径：每个算子一个隔离子进程。
     print(f"采集设备: {device_name}")
+    # 折算系数每次必写：先挂进 results，好让每个算子结束后的增量落盘都带上它
+    # （下划线前缀键不与算子名冲突；仅主进程写，worker 子进程的结果按算子名读回）。
+    sf = build_scaling_factors()
+    results["_scaling_factors"] = sf
+    if sf.get("_error"):
+        print(f"警告: {sf['_error']}")
+    else:
+        print(f"折算系数: 参考芯片 {sf['reference_chip']}，"
+              f"覆盖 {len(sf['chips'])} 颗芯片")
     if not ops_modules:
         print("警告: 名单过滤后没有可采集的算子")
     else:
@@ -919,7 +1016,11 @@ def collect_baseline(output_path, ncu_enabled=True,
         # 每个算子结束即合并落盘，中断也保住已完成的算子。
         _flush_results(results, output_path)
 
-    print(f"\n✓ Baseline 数据已写入: {output_path}  (共 {len(results)} 个算子)")
+    # 收尾再原子落盘一次（正常路径下与最后一次增量落盘内容一致；兜底空结果时也
+    # 能写出 {}）。
+    _flush_results(results, output_path)
+    n_ops = sum(1 for k in results if not k.startswith("_"))
+    print(f"\n✓ Baseline 数据已写入: {output_path}  (共 {n_ops} 个算子)")
     if failed:
         print(f"⚠ {len(failed)} 个算子子进程异常（已跳过，部分结果若有则保留）: "
               f"{', '.join(failed)}")

@@ -1,0 +1,2354 @@
+{
+  "_scaling_factors": {
+    "_note": "factor = vendor_peak / H800_peak；null 表示分子或分母缺失；nominal/measured 各一套。供 flaggems-vllm 跨芯片归一化对比使用。",
+    "reference_chip": "H800",
+    "source_specs": "hardware_specs.json",
+    "chips": [
+      {
+        "vendor": "nvidia",
+        "vendor_zh": "英伟达",
+        "chip": "H100",
+        "nominal": {
+          "bandwidth_gbps": null,
+          "tensor": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "tf32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        },
+        "measured": {
+          "bandwidth_gbps": 1.058062,
+          "tensor": {
+            "bf16": 0.992903,
+            "fp16": 1.001612,
+            "fp32": 0.924455,
+            "tf32": 0.992064,
+            "int8": null,
+            "fp64": null,
+            "fp8": 1.007863
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": 0.924621,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        }
+      },
+      {
+        "vendor": "t-head",
+        "vendor_zh": "平头哥",
+        "chip": "PPU-ZW810E",
+        "nominal": {
+          "bandwidth_gbps": null,
+          "tensor": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "tf32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        },
+        "measured": {
+          "bandwidth_gbps": 0.528438,
+          "tensor": {
+            "bf16": 0.059648,
+            "fp16": 0.063414,
+            "fp32": 0.539111,
+            "tf32": 0.076516,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": 0.420172,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        }
+      },
+      {
+        "vendor": "t-head",
+        "vendor_zh": "平头哥",
+        "chip": "m890",
+        "nominal": {
+          "bandwidth_gbps": null,
+          "tensor": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "tf32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        },
+        "measured": {
+          "bandwidth_gbps": 0.826858,
+          "tensor": {
+            "bf16": 0.286234,
+            "fp16": 0.304227,
+            "fp32": 0.257925,
+            "tf32": 0.163037,
+            "int8": null,
+            "fp64": null,
+            "fp8": 0.041825
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": 0.195797,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        }
+      },
+      {
+        "vendor": "enflame",
+        "vendor_zh": "燧原",
+        "chip": "S60",
+        "nominal": {
+          "bandwidth_gbps": 0.200597,
+          "tensor": {
+            "bf16": 0.132457,
+            "fp16": 0.132457,
+            "fp32": null,
+            "tf32": null,
+            "int8": 0.13239,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        },
+        "measured": {
+          "bandwidth_gbps": 0.159053,
+          "tensor": {
+            "bf16": 0.137692,
+            "fp16": 0.146378,
+            "fp32": 0.672931,
+            "tf32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": 0.029732,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        }
+      },
+      {
+        "vendor": "ascend",
+        "vendor_zh": "华为",
+        "chip": "Atlas 800T A3",
+        "nominal": {
+          "bandwidth_gbps": null,
+          "tensor": {
+            "bf16": null,
+            "fp16": 0.760364,
+            "fp32": null,
+            "tf32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        },
+        "measured": {
+          "bandwidth_gbps": 1.006306,
+          "tensor": {
+            "bf16": 0.774656,
+            "fp16": 0.848445,
+            "fp32": 4.100659,
+            "tf32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        }
+      },
+      {
+        "vendor": "metax",
+        "vendor_zh": "沐曦",
+        "chip": "C550",
+        "nominal": {
+          "bandwidth_gbps": 0.537313,
+          "tensor": {
+            "bf16": 0.323559,
+            "fp16": 0.323559,
+            "fp32": null,
+            "tf32": 0.323559,
+            "int8": 0.323396,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        },
+        "measured": {
+          "bandwidth_gbps": 0.472223,
+          "tensor": {
+            "bf16": 0.290647,
+            "fp16": 0.301453,
+            "fp32": 0.816797,
+            "tf32": 0.268901,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": 0.515701,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        }
+      },
+      {
+        "vendor": "kunlunxin",
+        "vendor_zh": "昆仑芯",
+        "chip": "P900",
+        "nominal": {
+          "bandwidth_gbps": 0.776119,
+          "tensor": {
+            "bf16": 0.353893,
+            "fp16": 0.353893,
+            "fp32": null,
+            "tf32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        },
+        "measured": {
+          "bandwidth_gbps": 0.836927,
+          "tensor": {
+            "bf16": 0.363587,
+            "fp16": 0.393609,
+            "fp32": 2.855084,
+            "tf32": 0.281464,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        }
+      },
+      {
+        "vendor": "kunlunxin",
+        "vendor_zh": "昆仑芯",
+        "chip": "P800",
+        "nominal": {
+          "bandwidth_gbps": null,
+          "tensor": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "tf32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        },
+        "measured": {
+          "bandwidth_gbps": null,
+          "tensor": {
+            "bf16": 0.03281,
+            "fp16": 0.034875,
+            "fp32": null,
+            "tf32": 0.062755,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        }
+      },
+      {
+        "vendor": "mthreads",
+        "vendor_zh": "摩尔",
+        "chip": "MTT-S5000",
+        "nominal": {
+          "bandwidth_gbps": 0.477612,
+          "tensor": {
+            "bf16": 0.434783,
+            "fp16": 0.434783,
+            "fp32": null,
+            "tf32": 0.434783,
+            "int8": 0.434563,
+            "fp64": 0.216418,
+            "fp8": 0.434563
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        },
+        "measured": {
+          "bandwidth_gbps": 0.448478,
+          "tensor": {
+            "bf16": 0.476604,
+            "fp16": 0.505429,
+            "fp32": 0.585632,
+            "tf32": 0.454771,
+            "int8": null,
+            "fp64": null,
+            "fp8": 0.502252
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        }
+      },
+      {
+        "vendor": "hygon",
+        "vendor_zh": "海光",
+        "chip": "BW1000",
+        "nominal": {
+          "bandwidth_gbps": 0.537313,
+          "tensor": {
+            "bf16": 0.485339,
+            "fp16": 0.485339,
+            "fp32": null,
+            "tf32": 0.485339,
+            "int8": 0.485093,
+            "fp64": 0.447761,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        },
+        "measured": {
+          "bandwidth_gbps": 0.501014,
+          "tensor": {
+            "bf16": 0.502689,
+            "fp16": 0.532322,
+            "fp32": 1.25422,
+            "tf32": 0.480891,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        }
+      },
+      {
+        "vendor": "iluvatar",
+        "vendor_zh": "天数",
+        "chip": "BI-V150",
+        "nominal": {
+          "bandwidth_gbps": 0.477612,
+          "tensor": {
+            "bf16": 0.258847,
+            "fp16": 0.258847,
+            "fp32": null,
+            "tf32": null,
+            "int8": 0.388075,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        },
+        "measured": {
+          "bandwidth_gbps": 0.37707,
+          "tensor": {
+            "bf16": 0.22405,
+            "fp16": 0.237295,
+            "fp32": 0.94051,
+            "tf32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        }
+      },
+      {
+        "vendor": "tsingmicro",
+        "vendor_zh": "清微智能",
+        "chip": "TX8110",
+        "nominal": {
+          "bandwidth_gbps": null,
+          "tensor": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "tf32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        },
+        "measured": {
+          "bandwidth_gbps": null,
+          "tensor": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "tf32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        }
+      },
+      {
+        "vendor": "tsingmicro",
+        "vendor_zh": "清微智能",
+        "chip": "REX1032",
+        "nominal": {
+          "bandwidth_gbps": 0.238806,
+          "tensor": {
+            "bf16": 0.517695,
+            "fp16": 0.517695,
+            "fp32": null,
+            "tf32": 1.035389,
+            "int8": 0.517433,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        },
+        "measured": {
+          "bandwidth_gbps": 0.208812,
+          "tensor": {
+            "bf16": 0.534439,
+            "fp16": 0.568076,
+            "fp32": 0.251132,
+            "tf32": 0.902762,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        }
+      },
+      {
+        "vendor": "cambricon",
+        "vendor_zh": "寒武纪",
+        "chip": "MLU590-M9DE",
+        "nominal": {
+          "bandwidth_gbps": 0.671642,
+          "tensor": {
+            "bf16": 0.33367,
+            "fp16": 0.33367,
+            "fp32": null,
+            "tf32": 0.33367,
+            "int8": 0.333502,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        },
+        "measured": {
+          "bandwidth_gbps": 0.661698,
+          "tensor": {
+            "bf16": 0.321686,
+            "fp16": 0.342034,
+            "fp32": 1.605599,
+            "tf32": 0.310771,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          },
+          "vector": {
+            "bf16": null,
+            "fp16": null,
+            "fp32": null,
+            "int8": null,
+            "fp64": null,
+            "fp8": null
+          }
+        }
+      }
+    ]
+  },
+  "grouped_topk": {
+    "native_api": "ops.grouped_topk",
+    "shapes": {
+      "[1, 256]": {
+        "torch.bfloat16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  1,
+                  256
+                ],
+                "dtype": "torch.bfloat16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  1,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  1,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 1,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 7.605970142158999,
+          "latency_ms": 0.007605970142158999,
+          "F_cuda": 488.0,
+          "F_tensor": 0.0,
+          "B_mem": 15104.0,
+          "U_cuda": 0.004071,
+          "U_tensor": 0.0,
+          "U_mem": 0.086541,
+          "U_bottle_neck": 0.086541,
+          "bottle_neck_unit": "mem",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__nv_bfloat16, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 488.0,
+              "F_tensor": 0.0,
+              "B_mem": 15104.0,
+              "U_cuda": 0.004071,
+              "U_tensor": 0.0,
+              "U_mem": 0.086541,
+              "T_us": 7.605970142158999
+            }
+          ],
+          "flops_cuda_core": 488.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 15104.0,
+          "util_cuda_core": 4.071e-05,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.00086541,
+          "bottleneck": "memory_bw",
+          "bottleneck_util": 0.00086541,
+          "cuda_flops": 488.0,
+          "sm_utilization": 0.00037865999999999996,
+          "report_path": "ncu_reports/grouped_topk_1x256_bfloat16.ncu-repz"
+        },
+        "torch.float16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  1,
+                  256
+                ],
+                "dtype": "torch.float16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  1,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  1,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 1,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 7.637946367338728,
+          "latency_ms": 0.007637946367338728,
+          "F_cuda": 744.0,
+          "F_tensor": 0.0,
+          "B_mem": 14848.0,
+          "U_cuda": 0.004084,
+          "U_tensor": 0.0,
+          "U_mem": 0.085495,
+          "U_bottle_neck": 0.085495,
+          "bottle_neck_unit": "mem",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__half, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 744.0,
+              "F_tensor": 0.0,
+              "B_mem": 14848.0,
+              "U_cuda": 0.004084,
+              "U_tensor": 0.0,
+              "U_mem": 0.085495,
+              "T_us": 7.637946367338728
+            }
+          ],
+          "flops_cuda_core": 744.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 14848.0,
+          "util_cuda_core": 4.084e-05,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.00085495,
+          "bottleneck": "memory_bw",
+          "bottleneck_util": 0.00085495,
+          "cuda_flops": 744.0,
+          "sm_utilization": 0.00037983000000000005,
+          "report_path": "ncu_reports/grouped_topk_1x256_float16.ncu-repz"
+        }
+      },
+      "[8, 256]": {
+        "torch.bfloat16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  8,
+                  256
+                ],
+                "dtype": "torch.bfloat16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  8,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  8,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 8,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 7.699350297903011,
+          "latency_ms": 0.007699350297903011,
+          "F_cuda": 3904.0,
+          "F_tensor": 0.0,
+          "B_mem": 18688.0,
+          "U_cuda": 0.031759,
+          "U_tensor": 0.0,
+          "U_mem": 0.10450099999999998,
+          "U_bottle_neck": 0.10450099999999998,
+          "bottle_neck_unit": "mem",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__nv_bfloat16, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 3904.0,
+              "F_tensor": 0.0,
+              "B_mem": 18688.0,
+              "U_cuda": 0.031759,
+              "U_tensor": 0.0,
+              "U_mem": 0.104501,
+              "T_us": 7.699350297903011
+            }
+          ],
+          "flops_cuda_core": 3904.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 18688.0,
+          "util_cuda_core": 0.00031759000000000003,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.0010450099999999999,
+          "bottleneck": "memory_bw",
+          "bottleneck_util": 0.0010450099999999999,
+          "cuda_flops": 3904.0,
+          "sm_utilization": 0.0029537499999999998,
+          "report_path": "ncu_reports/grouped_topk_8x256_bfloat16.ncu-repz"
+        },
+        "torch.float16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  8,
+                  256
+                ],
+                "dtype": "torch.float16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  8,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  8,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 8,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 7.714980402413536,
+          "latency_ms": 0.007714980402413536,
+          "F_cuda": 5952.0,
+          "F_tensor": 0.0,
+          "B_mem": 18432.0,
+          "U_cuda": 0.031944,
+          "U_tensor": 0.0,
+          "U_mem": 0.103615,
+          "U_bottle_neck": 0.103615,
+          "bottle_neck_unit": "mem",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__half, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 5952.0,
+              "F_tensor": 0.0,
+              "B_mem": 18432.0,
+              "U_cuda": 0.031944,
+              "U_tensor": 0.0,
+              "U_mem": 0.103615,
+              "T_us": 7.714980402413536
+            }
+          ],
+          "flops_cuda_core": 5952.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 18432.0,
+          "util_cuda_core": 0.00031944,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.00103615,
+          "bottleneck": "memory_bw",
+          "bottleneck_util": 0.00103615,
+          "cuda_flops": 5952.0,
+          "sm_utilization": 0.00297093,
+          "report_path": "ncu_reports/grouped_topk_8x256_float16.ncu-repz"
+        }
+      },
+      "[32, 256]": {
+        "torch.bfloat16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  32,
+                  256
+                ],
+                "dtype": "torch.bfloat16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  32,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  32,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 32,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 7.768546320825564,
+          "latency_ms": 0.007768546320825564,
+          "F_cuda": 15616.0,
+          "F_tensor": 0.0,
+          "B_mem": 30720.0,
+          "U_cuda": 0.125846,
+          "U_tensor": 0.0,
+          "U_mem": 0.170068,
+          "U_bottle_neck": 0.170068,
+          "bottle_neck_unit": "mem",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__nv_bfloat16, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 15616.0,
+              "F_tensor": 0.0,
+              "B_mem": 30720.0,
+              "U_cuda": 0.125846,
+              "U_tensor": 0.0,
+              "U_mem": 0.170068,
+              "T_us": 7.768546320825564
+            }
+          ],
+          "flops_cuda_core": 15616.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 30720.0,
+          "util_cuda_core": 0.00125846,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.00170068,
+          "bottleneck": "memory_bw",
+          "bottleneck_util": 0.00170068,
+          "cuda_flops": 15616.0,
+          "sm_utilization": 0.01170426,
+          "report_path": "ncu_reports/grouped_topk_32x256_bfloat16.ncu-repz"
+        },
+        "torch.float16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  32,
+                  256
+                ],
+                "dtype": "torch.float16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  32,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  32,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 32,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 7.9000740014597,
+          "latency_ms": 0.0079000740014597,
+          "F_cuda": 23808.0,
+          "F_tensor": 0.0,
+          "B_mem": 30720.0,
+          "U_cuda": 0.125436,
+          "U_tensor": 0.0,
+          "U_mem": 0.169991,
+          "U_bottle_neck": 0.169991,
+          "bottle_neck_unit": "mem",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__half, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 23808.0,
+              "F_tensor": 0.0,
+              "B_mem": 30720.0,
+              "U_cuda": 0.125436,
+              "U_tensor": 0.0,
+              "U_mem": 0.169991,
+              "T_us": 7.9000740014597
+            }
+          ],
+          "flops_cuda_core": 23808.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 30720.0,
+          "util_cuda_core": 0.00125436,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.00169991,
+          "bottleneck": "memory_bw",
+          "bottleneck_util": 0.00169991,
+          "cuda_flops": 23808.0,
+          "sm_utilization": 0.01166614,
+          "report_path": "ncu_reports/grouped_topk_32x256_float16.ncu-repz"
+        }
+      },
+      "[64, 256]": {
+        "torch.bfloat16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  64,
+                  256
+                ],
+                "dtype": "torch.bfloat16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  64,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  64,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 64,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 7.817194033448877,
+          "latency_ms": 0.007817194033448877,
+          "F_cuda": 31232.0,
+          "F_tensor": 0.0,
+          "B_mem": 47360.0,
+          "U_cuda": 0.243348,
+          "U_tensor": 0.0,
+          "U_mem": 0.253675,
+          "U_bottle_neck": 0.253675,
+          "bottle_neck_unit": "mem",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__nv_bfloat16, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 31232.0,
+              "F_tensor": 0.0,
+              "B_mem": 47360.0,
+              "U_cuda": 0.243348,
+              "U_tensor": 0.0,
+              "U_mem": 0.253675,
+              "T_us": 7.817194033448877
+            }
+          ],
+          "flops_cuda_core": 31232.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 47360.0,
+          "util_cuda_core": 0.00243348,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.00253675,
+          "bottleneck": "memory_bw",
+          "bottleneck_util": 0.00253675,
+          "cuda_flops": 31232.0,
+          "sm_utilization": 0.022632500000000003,
+          "report_path": "ncu_reports/grouped_topk_64x256_bfloat16.ncu-repz"
+        },
+        "torch.float16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  64,
+                  256
+                ],
+                "dtype": "torch.float16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  64,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  64,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 64,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 7.968953462903782,
+          "latency_ms": 0.007968953462903782,
+          "F_cuda": 47616.0,
+          "F_tensor": 0.0,
+          "B_mem": 47360.0,
+          "U_cuda": 0.250691,
+          "U_tensor": 0.0,
+          "U_mem": 0.261951,
+          "U_bottle_neck": 0.261951,
+          "bottle_neck_unit": "mem",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__half, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 47616.0,
+              "F_tensor": 0.0,
+              "B_mem": 47360.0,
+              "U_cuda": 0.250691,
+              "U_tensor": 0.0,
+              "U_mem": 0.261951,
+              "T_us": 7.968953462903782
+            }
+          ],
+          "flops_cuda_core": 47616.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 47360.0,
+          "util_cuda_core": 0.0025069099999999998,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.00261951,
+          "bottleneck": "memory_bw",
+          "bottleneck_util": 0.00261951,
+          "cuda_flops": 47616.0,
+          "sm_utilization": 0.02331539,
+          "report_path": "ncu_reports/grouped_topk_64x256_float16.ncu-repz"
+        }
+      },
+      "[128, 256]": {
+        "torch.bfloat16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  128,
+                  256
+                ],
+                "dtype": "torch.bfloat16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  128,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  128,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 128,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 7.8606288390623975,
+          "latency_ms": 0.007860628839062397,
+          "F_cuda": 62464.0,
+          "F_tensor": 0.0,
+          "B_mem": 79872.0,
+          "U_cuda": 0.47957399999999994,
+          "U_tensor": 0.0,
+          "U_mem": 0.42134800000000006,
+          "U_bottle_neck": 0.47957399999999994,
+          "bottle_neck_unit": "cuda",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__nv_bfloat16, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 62464.0,
+              "F_tensor": 0.0,
+              "B_mem": 79872.0,
+              "U_cuda": 0.479574,
+              "U_tensor": 0.0,
+              "U_mem": 0.421348,
+              "T_us": 7.8606288390623975
+            }
+          ],
+          "flops_cuda_core": 62464.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 79872.0,
+          "util_cuda_core": 0.00479574,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.00421348,
+          "bottleneck": "cuda_core",
+          "bottleneck_util": 0.00479574,
+          "cuda_flops": 62464.0,
+          "sm_utilization": 0.04460257,
+          "report_path": "ncu_reports/grouped_topk_128x256_bfloat16.ncu-repz"
+        },
+        "torch.float16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  128,
+                  256
+                ],
+                "dtype": "torch.float16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  128,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  128,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 128,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 8.044444466623355,
+          "latency_ms": 0.008044444466623356,
+          "F_cuda": 95232.0,
+          "F_tensor": 0.0,
+          "B_mem": 80128.0,
+          "U_cuda": 0.495575,
+          "U_tensor": 0.0,
+          "U_mem": 0.433951,
+          "U_bottle_neck": 0.495575,
+          "bottle_neck_unit": "cuda",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__half, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 95232.0,
+              "F_tensor": 0.0,
+              "B_mem": 80128.0,
+              "U_cuda": 0.495575,
+              "U_tensor": 0.0,
+              "U_mem": 0.433951,
+              "T_us": 8.044444466623355
+            }
+          ],
+          "flops_cuda_core": 95232.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 80128.0,
+          "util_cuda_core": 0.00495575,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.0043395099999999995,
+          "bottleneck": "cuda_core",
+          "bottleneck_util": 0.00495575,
+          "cuda_flops": 95232.0,
+          "sm_utilization": 0.046090679999999995,
+          "report_path": "ncu_reports/grouped_topk_128x256_float16.ncu-repz"
+        }
+      },
+      "[256, 256]": {
+        "torch.bfloat16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  256,
+                  256
+                ],
+                "dtype": "torch.bfloat16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  256,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  256,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 256,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 8.039485554246427,
+          "latency_ms": 0.008039485554246427,
+          "F_cuda": 124928.0,
+          "F_tensor": 0.0,
+          "B_mem": 145408.0,
+          "U_cuda": 0.982478,
+          "U_tensor": 0.0,
+          "U_mem": 0.779877,
+          "U_bottle_neck": 0.982478,
+          "bottle_neck_unit": "cuda",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__nv_bfloat16, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 124928.0,
+              "F_tensor": 0.0,
+              "B_mem": 145408.0,
+              "U_cuda": 0.982478,
+              "U_tensor": 0.0,
+              "U_mem": 0.779877,
+              "T_us": 8.039485554246427
+            }
+          ],
+          "flops_cuda_core": 124928.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 145408.0,
+          "util_cuda_core": 0.00982478,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.00779877,
+          "bottleneck": "cuda_core",
+          "bottleneck_util": 0.00982478,
+          "cuda_flops": 124928.0,
+          "sm_utilization": 0.09137482000000001,
+          "report_path": "ncu_reports/grouped_topk_256x256_bfloat16.ncu-repz"
+        },
+        "torch.float16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  256,
+                  256
+                ],
+                "dtype": "torch.float16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  256,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  256,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 256,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 8.148428695823196,
+          "latency_ms": 0.008148428695823195,
+          "F_cuda": 190464.0,
+          "F_tensor": 0.0,
+          "B_mem": 145408.0,
+          "U_cuda": 0.9643630000000001,
+          "U_tensor": 0.0,
+          "U_mem": 0.765086,
+          "U_bottle_neck": 0.9643630000000001,
+          "bottle_neck_unit": "cuda",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__half, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 190464.0,
+              "F_tensor": 0.0,
+              "B_mem": 145408.0,
+              "U_cuda": 0.964363,
+              "U_tensor": 0.0,
+              "U_mem": 0.765086,
+              "T_us": 8.148428695823196
+            }
+          ],
+          "flops_cuda_core": 190464.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 145408.0,
+          "util_cuda_core": 0.00964363,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.007650860000000001,
+          "bottleneck": "cuda_core",
+          "bottleneck_util": 0.00964363,
+          "cuda_flops": 190464.0,
+          "sm_utilization": 0.08969012,
+          "report_path": "ncu_reports/grouped_topk_256x256_float16.ncu-repz"
+        }
+      },
+      "[496, 256]": {
+        "torch.bfloat16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  496,
+                  256
+                ],
+                "dtype": "torch.bfloat16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  496,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  496,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 496,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 8.431491542120124,
+          "latency_ms": 0.008431491542120124,
+          "F_cuda": 242048.0,
+          "F_tensor": 0.0,
+          "B_mem": 268544.0,
+          "U_cuda": 1.7905729999999997,
+          "U_tensor": 0.0,
+          "U_mem": 1.351804,
+          "U_bottle_neck": 1.7905729999999997,
+          "bottle_neck_unit": "cuda",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__nv_bfloat16, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 242048.0,
+              "F_tensor": 0.0,
+              "B_mem": 268544.0,
+              "U_cuda": 1.790573,
+              "U_tensor": 0.0,
+              "U_mem": 1.351804,
+              "T_us": 8.431491542120124
+            }
+          ],
+          "flops_cuda_core": 242048.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 268544.0,
+          "util_cuda_core": 0.017905729999999998,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.01351804,
+          "bottleneck": "cuda_core",
+          "bottleneck_util": 0.017905729999999998,
+          "cuda_flops": 242048.0,
+          "sm_utilization": 0.16653133,
+          "report_path": "ncu_reports/grouped_topk_496x256_bfloat16.ncu-repz"
+        },
+        "torch.float16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  496,
+                  256
+                ],
+                "dtype": "torch.float16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  496,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  496,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 496,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 8.265335951732336,
+          "latency_ms": 0.008265335951732336,
+          "F_cuda": 369024.0,
+          "F_tensor": 0.0,
+          "B_mem": 268288.0,
+          "U_cuda": 1.784005,
+          "U_tensor": 0.0,
+          "U_mem": 1.346628,
+          "U_bottle_neck": 1.784005,
+          "bottle_neck_unit": "cuda",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__half, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 369024.0,
+              "F_tensor": 0.0,
+              "B_mem": 268288.0,
+              "U_cuda": 1.784005,
+              "U_tensor": 0.0,
+              "U_mem": 1.346628,
+              "T_us": 8.265335951732336
+            }
+          ],
+          "flops_cuda_core": 369024.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 268288.0,
+          "util_cuda_core": 0.01784005,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.013466279999999999,
+          "bottleneck": "cuda_core",
+          "bottleneck_util": 0.01784005,
+          "cuda_flops": 369024.0,
+          "sm_utilization": 0.16592043,
+          "report_path": "ncu_reports/grouped_topk_496x256_float16.ncu-repz"
+        }
+      },
+      "[512, 256]": {
+        "torch.bfloat16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  512,
+                  256
+                ],
+                "dtype": "torch.bfloat16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  512,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  512,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 512,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 8.453859109868745,
+          "latency_ms": 0.008453859109868745,
+          "F_cuda": 249856.0,
+          "F_tensor": 0.0,
+          "B_mem": 276480.0,
+          "U_cuda": 1.847685,
+          "U_tensor": 0.0,
+          "U_mem": 1.39434,
+          "U_bottle_neck": 1.847685,
+          "bottle_neck_unit": "cuda",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__nv_bfloat16, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 249856.0,
+              "F_tensor": 0.0,
+              "B_mem": 276480.0,
+              "U_cuda": 1.847685,
+              "U_tensor": 0.0,
+              "U_mem": 1.39434,
+              "T_us": 8.453859109868745
+            }
+          ],
+          "flops_cuda_core": 249856.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 276480.0,
+          "util_cuda_core": 0.01847685,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.0139434,
+          "bottleneck": "cuda_core",
+          "bottleneck_util": 0.01847685,
+          "cuda_flops": 249856.0,
+          "sm_utilization": 0.171843,
+          "report_path": "ncu_reports/grouped_topk_512x256_bfloat16.ncu-repz"
+        },
+        "torch.float16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  512,
+                  256
+                ],
+                "dtype": "torch.float16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  512,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  512,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 512,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 8.448091135709657,
+          "latency_ms": 0.008448091135709657,
+          "F_cuda": 380928.0,
+          "F_tensor": 0.0,
+          "B_mem": 276480.0,
+          "U_cuda": 1.857975,
+          "U_tensor": 0.0,
+          "U_mem": 1.400996,
+          "U_bottle_neck": 1.857975,
+          "bottle_neck_unit": "cuda",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__half, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 380928.0,
+              "F_tensor": 0.0,
+              "B_mem": 276480.0,
+              "U_cuda": 1.857975,
+              "U_tensor": 0.0,
+              "U_mem": 1.400996,
+              "T_us": 8.448091135709657
+            }
+          ],
+          "flops_cuda_core": 380928.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 276480.0,
+          "util_cuda_core": 0.01857975,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.014009959999999998,
+          "bottleneck": "cuda_core",
+          "bottleneck_util": 0.01857975,
+          "cuda_flops": 380928.0,
+          "sm_utilization": 0.17280003,
+          "report_path": "ncu_reports/grouped_topk_512x256_float16.ncu-repz"
+        }
+      },
+      "[16384, 256]": {
+        "torch.bfloat16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  16384,
+                  256
+                ],
+                "dtype": "torch.bfloat16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  16384,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  16384,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 16384,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 45.53671490582154,
+          "latency_ms": 0.04553671490582154,
+          "F_cuda": 7995392.0,
+          "F_tensor": 0.0,
+          "B_mem": 8459264.0,
+          "U_cuda": 8.122248,
+          "U_tensor": 0.0,
+          "U_mem": 5.837667,
+          "U_bottle_neck": 8.122248,
+          "bottle_neck_unit": "cuda",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__nv_bfloat16, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 7995392.0,
+              "F_tensor": 0.0,
+              "B_mem": 8459264.0,
+              "U_cuda": 8.122248,
+              "U_tensor": 0.0,
+              "U_mem": 5.837667,
+              "T_us": 45.53671490582154
+            }
+          ],
+          "flops_cuda_core": 7995392.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 8459264.0,
+          "util_cuda_core": 0.08122248000000001,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.05837667,
+          "bottleneck": "cuda_core",
+          "bottleneck_util": 0.08122248000000001,
+          "cuda_flops": 7995392.0,
+          "sm_utilization": 0.7554054600000001,
+          "report_path": "ncu_reports/grouped_topk_16384x256_bfloat16.ncu-repz"
+        },
+        "torch.float16": {
+          "config": {
+            "inputs": {
+              "scores": {
+                "shape": [
+                  16384,
+                  256
+                ],
+                "dtype": "torch.float16"
+              },
+              "n_group": {
+                "scalar": 8
+              },
+              "topk_group": {
+                "scalar": 4
+              },
+              "topk": {
+                "scalar": 8
+              },
+              "renormalize": {
+                "scalar": true
+              },
+              "routed_scaling_factor": {
+                "scalar": 1.0
+              },
+              "bias": {
+                "shape": [
+                  256
+                ],
+                "dtype": "torch.float32"
+              },
+              "scoring_func": {
+                "scalar": 0
+              }
+            },
+            "outputs": {
+              "topk_weights": {
+                "shape": [
+                  16384,
+                  8
+                ],
+                "dtype": "torch.float32"
+              },
+              "topk_ids": {
+                "shape": [
+                  16384,
+                  8
+                ],
+                "dtype": "torch.int32"
+              }
+            },
+            "dims": {
+              "T": 16384,
+              "E": 256,
+              "n_group": 8,
+              "topk_group": 4,
+              "topk": 8
+            }
+          },
+          "T_us": 45.76317845974993,
+          "latency_ms": 0.04576317845974993,
+          "F_cuda": 12189696.0,
+          "F_tensor": 0.0,
+          "B_mem": 8459520.0,
+          "U_cuda": 8.134059,
+          "U_tensor": 0.0,
+          "U_mem": 5.844783,
+          "U_bottle_neck": 8.134059,
+          "bottle_neck_unit": "cuda",
+          "num_kernels": 1,
+          "per_kernel": [
+            {
+              "name": "void grouped_topk_fused_small_expert_count_kernel<__half, float, int, 0, 256, 1, 8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+              "F_cuda": 12189696.0,
+              "F_tensor": 0.0,
+              "B_mem": 8459520.0,
+              "U_cuda": 8.134059,
+              "U_tensor": 0.0,
+              "U_mem": 5.844783,
+              "T_us": 45.76317845974993
+            }
+          ],
+          "flops_cuda_core": 12189696.0,
+          "flops_tensor_core": 0.0,
+          "memory_bytes": 8459520.0,
+          "util_cuda_core": 0.08134059,
+          "util_tensor_core": 0.0,
+          "util_memory_bw": 0.05844783,
+          "bottleneck": "cuda_core",
+          "bottleneck_util": 0.08134059,
+          "cuda_flops": 12189696.0,
+          "sm_utilization": 0.75650398,
+          "report_path": "ncu_reports/grouped_topk_16384x256_float16.ncu-repz"
+        }
+      }
+    }
+  }
+}
