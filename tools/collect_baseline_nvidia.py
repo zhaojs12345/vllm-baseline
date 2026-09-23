@@ -942,7 +942,8 @@ def _spawn_op_worker(op_name, ncu_enabled, report_dir, device, op_timeout):
 def collect_baseline(output_path, ncu_enabled=True,
                      report_dir=None, device=None,
                      only=None, whitelist=None, blacklist=None,
-                     worker=False, op_timeout=1800):
+                     worker=False, op_timeout=1800,
+                     reference_chip=DEFAULT_REFERENCE_CHIP):
     """采集 baseline 数据并写入 JSON。
 
     采集全部走方案B（ops/ 下的自定义算子模块）。yaml 声明式路径（baseline_shape.yaml
@@ -960,7 +961,10 @@ def collect_baseline(output_path, ncu_enabled=True,
     only 与 whitelist 取交集后再减去 blacklist。
     op_timeout：编排模式下每个算子子进程的超时秒数（防 CUDA 挂起卡死整轮）。
 
-    折算系数每次必写：编排（主）进程把各厂商芯片相对 DEFAULT_REFERENCE_CHIP（H800，
+    reference_chip：折算系数的分母芯片（baseline 就是在这颗卡上采的），缺省 H800。
+    由 --reference-chip 传入，换基线芯片时无需改代码。
+
+    折算系数每次必写：编排（主）进程把各厂商芯片相对 reference_chip（缺省 H800，
     本机采集芯片）的折算系数写进输出 JSON 顶层 `_scaling_factors` 键（下划线前缀不与
     算子名冲突，flaggems-vllm 按算子名查表时天然忽略），与 NCU 数据放在同一份文件里。
     worker 子进程只采单个算子、结果由主进程按算子名读回，故不重复写折算系数。
@@ -993,7 +997,7 @@ def collect_baseline(output_path, ncu_enabled=True,
     print(f"采集设备: {device_name}")
     # 折算系数每次必写：先挂进 results，好让每个算子结束后的增量落盘都带上它
     # （下划线前缀键不与算子名冲突；仅主进程写，worker 子进程的结果按算子名读回）。
-    sf = build_scaling_factors()
+    sf = build_scaling_factors(reference_chip=reference_chip)
     results["_scaling_factors"] = sf
     if sf.get("_error"):
         print(f"警告: {sf['_error']}")
@@ -1051,6 +1055,10 @@ if __name__ == "__main__":
     parser.add_argument("--op-timeout", type=float, default=1800,
                         help="编排模式下每个算子子进程的超时秒数（防 CUDA 挂起，"
                              "缺省 1800）")
+    parser.add_argument("--reference-chip", default=DEFAULT_REFERENCE_CHIP,
+                        help=f"折算系数的分母（基准）芯片，即 baseline 采集所在的卡；"
+                             f"须为 hardware_specs.json 中的 chip 名，"
+                             f"缺省 {DEFAULT_REFERENCE_CHIP}")
     parser.add_argument("--_worker", action="store_true",
                         help="内部使用：子进程直采模式，在本进程内采集选中算子、"
                              "不再 spawn（由编排模式自动传入，勿手动使用）")
@@ -1062,4 +1070,5 @@ if __name__ == "__main__":
                      whitelist=_parse_name_list(args.whitelist),
                      blacklist=_parse_name_list(args.blacklist),
                      worker=getattr(args, "_worker"),
-                     op_timeout=args.op_timeout)
+                     op_timeout=args.op_timeout,
+                     reference_chip=args.reference_chip)
